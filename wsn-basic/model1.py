@@ -252,8 +252,7 @@ t_plot = max(1, min(3, T))
 
 plot_solution(
     F=F, installed=installed, q_fixed=q_fixed, q_sink=q_sink, R_comm=R_comm,
-    mob_names=mob_names, r_mobile=r_mobile, T=T,
-    E_t=E_t, x_val=x_val, pos_node=pos_node, t_plot=t_plot,
+    mob_names=mob_names, T=T, r_mobile=r_mobile, 
     region=region, out_path="./pic2.png"
 )
 

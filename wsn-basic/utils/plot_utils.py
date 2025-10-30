@@ -2,6 +2,39 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle
 
+# ======================
+# Helper: trajetórias com quebras
+# ======================
+
+def _traj_with_breaks(r_mobile, name, T, close=False, jump_factor=5.0):
+    """
+    Gera uma trajetória shape (N,2) com linhas 'quebradas' (NaNs) em saltos grandes.
+    - close=False por padrão: não faz o wrap (evita risco entre último e primeiro).
+    - jump_factor controla a sensibilidade: quebra quando passo > jump_factor * mediana.
+    """
+    pts = np.array([r_mobile(name, t) for t in range(1, T + 1)], dtype=float)
+
+    # Opcionalmente fechar (em geral, NÃO faça para caminhos abertos)
+    if close:
+        pts = np.vstack([pts, pts[0]])
+
+    # Distâncias entre pontos consecutivos
+    if len(pts) >= 2:
+        diffs = np.diff(pts, axis=0)
+        dists = np.linalg.norm(diffs, axis=1)
+        med = np.median(dists) if np.any(dists > 0) else 0.0
+        # limiar robusto: maior entre 1e-9 e mediana*jump_factor
+        thr = max(1e-9, med * jump_factor)
+
+        # Monta com NaNs onde houver salto
+        rows = [pts[0]]
+        for k in range(1, len(pts)):
+            if dists[k - 1] > thr:
+                rows.append([np.nan, np.nan])  # quebra a linha aqui
+            rows.append(pts[k])
+        pts = np.array(rows, dtype=float)
+    return pts
+
 # ================
 # FIGURAS
 # ================
@@ -20,9 +53,9 @@ def plot_candidates_and_paths(F, q_fixed, q_sink, R_comm, mob_names, r_mobile, T
     ax.scatter([q_sink[0]], [q_sink[1]], marker='*', s=180, label="sink")
     ax.add_patch(Circle((q_sink[0], q_sink[1]), R_comm, fill=False, linewidth=1, ls='--'))
 
-    # trajetórias
+    # trajetórias (NÃO fecha; quebra saltos com NaN)
     for name in mob_names:
-        traj = np.array([r_mobile(name, t) for t in range(1, T + 1)] + [r_mobile(name, 1)])
+        traj = _traj_with_breaks(r_mobile, name, T, close=False, jump_factor=5.0)
         ax.plot(traj[:, 0], traj[:, 1], linestyle='-', label=f"traj {name}")
         ax.scatter(traj[:, 0], traj[:, 1], marker='o', s=12)
 
@@ -37,8 +70,8 @@ def plot_candidates_and_paths(F, q_fixed, q_sink, R_comm, mob_names, r_mobile, T
     plt.savefig(out_path, dpi=150)
     plt.close()
 
-def plot_solution(F, installed, q_fixed, q_sink, R_comm, mob_names, r_mobile, T,
-                  E_t, x_val, pos_node, t_plot, region, out_path="./pic2.png"):
+def plot_solution(F, installed, q_fixed, q_sink, R_comm, 
+                  mob_names, T, r_mobile, region, out_path="./pic2.png"):
     plt.figure(figsize=(10, 10))
     ax = plt.gca()
 
@@ -57,21 +90,13 @@ def plot_solution(F, installed, q_fixed, q_sink, R_comm, mob_names, r_mobile, T,
     ax.scatter([q_sink[0]], [q_sink[1]], marker='*', s=180, label="sink")
     ax.add_patch(Circle((q_sink[0], q_sink[1]), R_comm, fill=False, linewidth=1, ls='--'))
 
-    # trajetórias
+    # trajetórias (contexto): não fechar, com quebras
     for name in mob_names:
-        traj = np.array([r_mobile(name, t) for t in range(1, T + 1)] + [r_mobile(name, 1)])
+        traj = _traj_with_breaks(r_mobile, name, T, close=False, jump_factor=5.0)
         ax.plot(traj[:, 0], traj[:, 1], linestyle='-', alpha=0.6)
         ax.scatter(traj[:, 0], traj[:, 1], marker='o', s=10, alpha=0.6)
 
-    # fluxos ativos no snapshot
-    flows_t = {(i, j): x_val[(i, j, t_plot)] for (i, j) in E_t[t_plot] if x_val[(i, j, t_plot)] > 1e-6}
-    for (i, j), val in flows_t.items():
-        pi, pj = pos_node(i, t_plot), pos_node(j, t_plot)
-        ax.plot([pi[0], pj[0]], [pi[1], pj[1]], linewidth=2)
-        cx, cy = (pi[0] + pj[0]) / 2, (pi[1] + pj[1]) / 2
-        ax.text(cx, cy, f"{val:.2f}", fontsize=8)
-
-    ax.set_title(f"Solução: instalados e fluxos em t={t_plot} (com raios)")
+    ax.set_title(f"Solução (raios de comunicação instalados)")
     ax.axis('equal')
     ax.grid(True)
     ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0.0)
