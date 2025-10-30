@@ -72,74 +72,83 @@ def _distribute_integer_proportions(total_steps, weights):
 
 def make_mobile_trajectory_fn(function_path, is_closed: bool, is_roundtrip: bool, T: int, speed: float):
     """
-    Cria uma função r(tau) que retorna posição 2D para tau=1..T (inteiros).
-    A distribuição de passos por segmento considera o tempo de cada trecho:
-        time_k = length_k / speed
-    e aloca passos proporcionalmente a time_k.
-
-    - function_path: lista de [x_expr, y_expr] com 't'∈[0,1].
-    - is_closed: percurso cíclico.
-    - is_roundtrip: se não for fechado, ida-e-volta.
+    Cria r(tau) -> R^2 para tau=1..T.
+    - Se is_closed=True: percorre os segmentos em ciclo (apenas "ida", orientação direta).
+    - Se is_roundtrip=True e não for fechado: faz vai-e-volta ponto a ponto:
+        [0,1,2,...,K-1, K-1,...,2,1,0] onde os da 'volta' são percorridos no sentido inverso.
+    A distribuição de passos por segmento é proporcional ao tempo (len / speed).
     """
     K = len(function_path)
     if K == 0:
         raise ValueError("functionPath vazio.")
 
-    # Comprimento por segmento original
+    # Comprimento por segmento original (param t ∈ [0,1], orientação direta)
     lens_by_k = [_segment_length(function_path[k], nsamples=200) for k in range(K)]
 
-    # Sequência efetiva
+    # Sequência efetiva de (segmento, direcao) onde direcao = +1 (ida) ou -1 (volta)
+    seq = []
     if is_closed:
-        seq = list(range(K))
-    elif is_roundtrip and K > 1:
-        seq = list(range(K)) + list(range(K-2, 0, -1))
+        # ciclo apenas no sentido direto
+        seq = [(k, +1) for k in range(K)]
+    elif is_roundtrip and K >= 1:
+        # ida
+        seq.extend((k, +1) for k in range(K))
+        # volta (espelha todos os segmentos no sentido inverso)
+        # Obs.: para evitar duplicar "cantos" demais, a ordem abaixo inclui todos;
+        # se quiser eliminar um endpoint duplicado, pode trocar o range para (K-2...0).
+        seq.extend((k, -1) for k in range(K - 1, -1, -1))
     else:
-        seq = list(range(K))
+        # caminho aberto somente no sentido direto
+        seq = [(k, +1) for k in range(K)]
 
-    # Tempo efetivo por segmento (comprimento/velocidade)
-    spd = float(speed) if speed is not None else 1.0
-    spd = 1.0 if spd <= 0 else spd
-    times_eff = [lens_by_k[k] / spd for k in seq]
+    # Tempo efetivo por (segmento,direção): igual ao do segmento
+    spd = 1.0 if speed is None or speed <= 0 else float(speed)
+    times_eff = [lens_by_k[k] / spd for (k, _dir) in seq]
 
-    # Alocação de passos proporcional ao "tempo" de cada segmento
-    steps_per_seg = _distribute_integer_proportions(T, times_eff)
+    # Alocação discreta de passos
+    steps_per_leg = _distribute_integer_proportions(T, times_eff)
+
+    # Garante pelo menos 1 passo por perna quando fizer sentido
     if T >= len(seq):
-        steps_per_seg = [max(1, s) for s in steps_per_seg]
-        surplus = int(sum(steps_per_seg) - T)
+        steps_per_leg = [max(1, s) for s in steps_per_leg]
+        surplus = int(sum(steps_per_leg) - T)
         if surplus > 0:
-            # remove 1 passo dos com menor tempo efetivo
-            order = np.argsort(times_eff)
+            order = np.argsort(times_eff)  # remove dos mais curtos primeiro
             for idx in order:
-                if surplus == 0:
-                    break
-                if steps_per_seg[idx] > 1:
-                    steps_per_seg[idx] -= 1
+                if surplus == 0: break
+                if steps_per_leg[idx] > 1:
+                    steps_per_leg[idx] -= 1
                     surplus -= 1
         elif surplus < 0:
             deficit = -surplus
-            order = np.argsort(-np.asarray(times_eff))
+            order = np.argsort(-np.asarray(times_eff))  # adiciona nos mais longos
             for k in range(deficit):
-                steps_per_seg[order[k % len(seq)]] += 1
+                steps_per_leg[order[k % len(seq)]] += 1
 
-    cut = np.cumsum([0] + steps_per_seg)
+    cut = np.cumsum([0] + steps_per_leg)
     S = len(seq)
 
     def r_of_tau(tau: int) -> np.ndarray:
         u = tau - 1
-        seg_eff = int(np.searchsorted(cut, u, side="right") - 1)
-        seg_eff = min(max(seg_eff, 0), S-1)
-        local_len = steps_per_seg[seg_eff]
+        leg = int(np.searchsorted(cut, u, side="right") - 1)
+        leg = min(max(leg, 0), S - 1)
+        local_len = steps_per_leg[leg]
         if local_len <= 1:
-            tloc = 1.0
+            tloc = 1.0  # ponto final do param
         else:
-            tloc = (u - cut[seg_eff]) / (local_len - 1)  # [0,1]
-        k = seq[seg_eff]
+            tloc = (u - cut[leg]) / (local_len - 1)  # ∈ [0,1]
+        k, direc = seq[leg]
+
+        # t efetivo conforme a direção: ida = t, volta = 1 - t
+        teff = tloc if direc == +1 else (1.0 - tloc)
+
         x_expr, y_expr = function_path[k]
-        x = _safe_eval_expr(str(x_expr), tloc)
-        y = _safe_eval_expr(str(y_expr), tloc)
+        x = _safe_eval_expr(str(x_expr), teff)
+        y = _safe_eval_expr(str(y_expr), teff)
         return np.array([x, y], dtype=float)
 
     return r_of_tau
+
 
 # ==============================
 # Fixos aleatórios
