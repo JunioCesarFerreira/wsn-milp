@@ -11,6 +11,36 @@ except Exception as e:
         "Este script requer 'Pillow' para gerar o GIF. Instale com: pip install pillow"
     ) from e 
     
+
+def _traj_with_breaks(r_mobile, name, T, close=False, jump_factor=5.0):
+    """
+    Gera uma trajetória shape (N,2) com linhas 'quebradas' (NaNs) em saltos grandes.
+    - close=False por padrão: não faz o wrap (evita risco entre último e primeiro).
+    - jump_factor controla a sensibilidade: quebra quando passo > jump_factor * mediana.
+    """
+    pts = np.array([r_mobile(name, t) for t in range(1, T + 1)], dtype=float)
+
+    # Opcionalmente fechar (em geral, NÃO faça para caminhos abertos)
+    if close:
+        pts = np.vstack([pts, pts[0]])
+
+    # Distâncias entre pontos consecutivos
+    if len(pts) >= 2:
+        diffs = np.diff(pts, axis=0)
+        dists = np.linalg.norm(diffs, axis=1)
+        med = np.median(dists) if np.any(dists > 0) else 0.0
+        # limiar robusto: maior entre 1e-9 e mediana*jump_factor
+        thr = max(1e-9, med * jump_factor)
+
+        # Monta com NaNs onde houver salto
+        rows = [pts[0]]
+        for k in range(1, len(pts)):
+            if dists[k - 1] > thr:
+                rows.append([np.nan, np.nan])  # quebra a linha aqui
+            rows.append(pts[k])
+        pts = np.array(rows, dtype=float)
+    return pts    
+
 def save_routes_gif(installed, r_mobile, mob_names, q_sink, q_fixed, R_comm, region, x_val, E_t, T, F):
     # Pasta de frames
     frames_dir = "./frames_gif"
@@ -108,8 +138,17 @@ def save_routes_gif(installed, r_mobile, mob_names, q_sink, q_fixed, R_comm, reg
             duration=500,   # ms por frame (2 fps); ajuste aqui
             loop=0          # 0 = loop infinito
         )
+        
+def save_routes2_gif(
+    installed, r_mobile, mob_names, q_sink, q_fixed, R_comm, region,
+    x_val, E_t, T, F, *, jump_factor: float = 5.0, fps: int = 10
+):
+    import os, io, shutil
+    from PIL import Image
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import Circle
 
-def save_routes2_gif(installed, r_mobile, mob_names, q_sink, q_fixed, R_comm, region, x_val, E_t, T, F):
     # Pasta de frames
     frames_dir = "./frames_gif"
     if os.path.isdir(frames_dir):
@@ -121,8 +160,12 @@ def save_routes2_gif(installed, r_mobile, mob_names, q_sink, q_fixed, R_comm, re
     NODE_S_SMALL = 40
     NODE_S_BIG = 120
 
-    # Pré-computar trajetórias para contexto (uma vez só)
-    traj_cache = {name: np.array([r_mobile(name, t) for t in range(1, T+1)]) for name in mob_names}
+    # Pré-computar trajetórias para contexto (AGORA com quebras/NaN)
+    # close=False evita "fechar" caminhos abertos; jump_factor controla sensibilidade de quebra
+    traj_cache = {
+        name: _traj_with_breaks(r_mobile, name, T, close=False, jump_factor=jump_factor)
+        for name in mob_names
+    }
 
     def _pos_node(n, t):
         if n[0] == "sink":
@@ -151,7 +194,7 @@ def save_routes2_gif(installed, r_mobile, mob_names, q_sink, q_fixed, R_comm, re
         # Sink (sem círculo)
         ax.scatter([q_sink[0]], [q_sink[1]], marker='*', s=180, label=None)
 
-        # Trajetórias dos móveis – destacadas com tracejado
+        # Trajetórias dos móveis – agora usando as trajetórias com quebras (tracejado)
         for name in mob_names:
             traj = traj_cache[name]
             ax.plot(traj[:, 0], traj[:, 1], linestyle='--', linewidth=2, alpha=0.7, label=None)
@@ -163,7 +206,11 @@ def save_routes2_gif(installed, r_mobile, mob_names, q_sink, q_fixed, R_comm, re
             ax.add_patch(Circle((pm[0], pm[1]), R_comm, fill=False, linewidth=1, ls='--'))
 
         # Arestas ativas; evidenciar rotas que envolvem móveis com tracejado
-        flows = {(i, j): x_val[(i, j, t)] for (i, j) in E_t[t] if x_val[(i, j, t)] > FLOW_EPS}
+        flows = {
+            (i, j): x_val.get((i, j, t), 0.0)
+            for (i, j) in E_t.get(t, [])
+            if x_val.get((i, j, t), 0.0) > FLOW_EPS
+        }
         for (i, j), val in flows.items():
             pi, pj = _pos_node(i, t), _pos_node(j, t)
             is_mobile_route = (i[0] == "m") or (j[0] == "m")
@@ -206,44 +253,7 @@ def save_routes2_gif(installed, r_mobile, mob_names, q_sink, q_fixed, R_comm, re
             gif_path,
             save_all=True,
             append_images=frames[1:],
-            duration=500,   # ms por frame
+            duration=int(1000 / max(1, fps)),  # ms por frame
             loop=0
         )
-       
-        
-        
-def save_mobile_gif(mobile_name, r_mobile, q_sink, q_fixed, R_comm, region, T, out_path="mobile.gif", fps=10):
-    """
-    Cria um GIF do móvel se deslocando, mostrando o sink e candidatos.
-    Requer 'imageio' instalado.
-    """
-    import imageio.v2 as imageio
-
-    frames = []
-    for t in range(1, T + 1):
-        fig, ax = plt.subplots(figsize=(6, 6))
-        # candidatos
-        for j, q in q_fixed.items():
-            ax.scatter([q[0]], [q[1]], marker='s', s=40, alpha=0.6)
-        # sink
-        ax.scatter([q_sink[0]], [q_sink[1]], marker='*', s=180)
-        # móvel
-        p = r_mobile(mobile_name, t)
-        ax.scatter([p[0]], [p[1]], marker='o', s=80)
-        ax.add_patch(Circle((p[0], p[1]), R_comm, fill=False, linewidth=1, ls='--'))
-
-        ax.set_title(f"{mobile_name} - t={t}")
-        ax.axis('equal')
-        ax.grid(True)
-        if region and len(region) == 4:
-            ax.set_xlim(region[0], region[2])
-            ax.set_ylim(region[1], region[3])
-        plt.tight_layout()
-
-        fig.canvas.draw()
-        frame = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
-        frame = frame.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-        frames.append(frame)
-        plt.close(fig)
-
-    imageio.mimsave(out_path, frames, fps=fps)
+    return gif_path
