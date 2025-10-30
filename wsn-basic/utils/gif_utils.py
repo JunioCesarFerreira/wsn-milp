@@ -1,5 +1,4 @@
-import os
-import io, shutil
+import os, io, shutil
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle
@@ -44,20 +43,29 @@ def _traj_with_breaks(r_mobile, name, T, close=False, jump_factor=5.0):
 
 def save_routes_gif(
     installed, r_mobile, mob_names, q_sink, q_fixed, R_comm, region,
-    x_val, E_t, T, F, *, jump_factor: float = 5.0, fps: int = 5
+    x_val, E_t, T, F, *, jump_factor: float = 5.0, fps: int = 3
 ):
+    # Paleta / estilo
+    COLOR_SINK   = "blue"
+    COLOR_FIXED0 = "gray"    # não instalado
+    COLOR_FIXED1 = "green"   # instalado
+    COLOR_MOBILE = "black"
+    COLOR_LINK   = "red"
+
+    S_SINK   = 260
+    S_FIXED0 = 40
+    S_FIXED1 = 120
+    S_MOBILE = 80
+
     # Pasta de frames
     frames_dir = "./frames_gif"
     if os.path.isdir(frames_dir):
         shutil.rmtree(frames_dir)
     os.makedirs(frames_dir, exist_ok=True)
 
-    # Limiares e aparência
-    FLOW_EPS = 1e-6                # fluxo mínimo para considerar uma aresta ativa
-    NODE_S_SMALL = 40
-    NODE_S_BIG = 120
+    FLOW_EPS = 1e-6
 
-    # Pré-computar trajetórias para contexto (AGORA com quebras/NaN)
+    # Trajetórias com quebras
     traj_cache = {
         name: _traj_with_breaks(r_mobile, name, T, close=False, jump_factor=jump_factor)
         for name in mob_names
@@ -73,36 +81,36 @@ def save_routes_gif(
         raise ValueError("nó desconhecido")
 
     def _draw_frame(t):
-        """Desenha e retorna um objeto PIL.Image do frame do tempo t."""
         fig = plt.figure(figsize=(10, 8))
         ax = plt.gca()
 
-        # Todos candidatos (marcadores pequenos)
+        # Fixos não instalados (cinza)
+        installed_set = set(installed)
         for j in F:
-            q = q_fixed[j]
-            ax.scatter([q[0]], [q[1]], marker='s', s=NODE_S_SMALL, alpha=0.6, label=None)
+            if j not in installed_set:
+                q = q_fixed[j]
+                ax.scatter([q[0]], [q[1]], marker='s', s=S_FIXED0, c=COLOR_FIXED0, alpha=0.9)
 
-        # Instalados (marcadores maiores + raio)
+        # Fixos instalados (verde) + (se quiser, mantenha o círculo de alcance)
         for j in installed:
             q = q_fixed[j]
-            ax.scatter([q[0]], [q[1]], marker='s', s=NODE_S_BIG, label=None)
-            ax.add_patch(Circle((q[0], q[1]), R_comm, fill=False, linewidth=1, ls='--'))
+            ax.scatter([q[0]], [q[1]], marker='s', s=S_FIXED1, c=COLOR_FIXED1)
+            ax.add_patch(Circle((q[0], q[1]), R_comm, fill=False, linewidth=1, ls='--', edgecolor=COLOR_FIXED1, alpha=0.6))
 
-        # Sink + raio
-        ax.scatter([q_sink[0]], [q_sink[1]], marker='*', s=180, label=None)
-        ax.add_patch(Circle((q_sink[0], q_sink[1]), R_comm, fill=False, linewidth=1, ls='--'))
+        # Sink (estrela azul)
+        ax.scatter([q_sink[0]], [q_sink[1]], marker='*', s=S_SINK, c=COLOR_SINK)
 
-        # Trajetórias (linhas claras para contexto) — agora com quebras
+        # Trajetórias (pretas, tracejadas e leves para contexto)
         for name in mob_names:
             traj = traj_cache[name]
-            ax.plot(traj[:, 0], traj[:, 1], linestyle='-', alpha=0.25, label=None)
+            ax.plot(traj[:, 0], traj[:, 1], linestyle=':', linewidth=2, alpha=0.5, c=COLOR_MOBILE)
 
-        # Posição atual de cada móvel (ponto mais destacado)
+        # Móveis (pretos)
         for name in mob_names:
             pm = r_mobile(name, t)
-            ax.scatter([pm[0]], [pm[1]], marker='o', s=60, label=None)
+            ax.scatter([pm[0]], [pm[1]], marker='o', s=S_MOBILE, c=COLOR_MOBILE)
 
-        # Arestas ativas (x_ij(t) > FLOW_EPS)
+        # Links ativos (vermelho sólido)
         flows = {
             (i, j): x_val.get((i, j, t), 0.0)
             for (i, j) in E_t.get(t, [])
@@ -110,9 +118,7 @@ def save_routes_gif(
         }
         for (i, j), val in flows.items():
             pi, pj = _pos_node(i, t), _pos_node(j, t)
-            ax.plot([pi[0], pj[0]], [pi[1], pj[1]], linewidth=2)
-            cx, cy = (pi[0] + pj[0]) / 2, (pi[1] + pj[1]) / 2
-            ax.text(cx, cy, f"{val:.2f}", fontsize=8)
+            ax.plot([pi[0], pj[0]], [pi[1], pj[1]], linewidth=2.2, linestyle='-', c=COLOR_LINK, alpha=0.95)
 
         ax.set_title(f"Rotas de comunicação (t = {t})")
         ax.axis('equal')
@@ -120,18 +126,15 @@ def save_routes_gif(
         if region and len(region) == 4:
             ax.set_xlim(region[0], region[2])
             ax.set_ylim(region[1], region[3])
-
         plt.tight_layout()
 
-        # Renderizar figura para um buffer e criar PIL.Image
         buf = io.BytesIO()
         fig.canvas.print_png(buf)
-        plt.close(fig)  # fecha a figura para liberar memória
+        plt.close(fig)
         buf.seek(0)
-        img = Image.open(buf).convert("P")  # paleta para GIF
+        img = Image.open(buf).convert("P")
         return img
 
-    # Gerar e salvar frames individuais + montar GIF
     frames = []
     for t in range(1, T + 1):
         img = _draw_frame(t)
@@ -139,28 +142,34 @@ def save_routes_gif(
         img.convert("RGB").save(frame_path, format="PNG")
         frames.append(img)
 
-    # Salvar GIF (autoplay/loop quando embutido no navegador/apresentações)
     gif_path = "./routes.gif"
     if frames:
         frames[0].save(
             gif_path,
             save_all=True,
             append_images=frames[1:],
-            duration=int(1000 / max(1, fps)),   # ms por frame (default 2 fps)
-            loop=0                               # 0 = loop infinito
+            duration=int(1000 / max(1, fps)),
+            loop=0
         )
     return gif_path
+
 
         
 def save_routes2_gif(
     installed, r_mobile, mob_names, q_sink, q_fixed, R_comm, region,
-    x_val, E_t, T, F, *, jump_factor: float = 5.0, fps: int = 5
+    x_val, E_t, T, F, *, jump_factor: float = 5.0, fps: int = 3
 ):
-    import os, io, shutil
-    from PIL import Image
-    import numpy as np
-    import matplotlib.pyplot as plt
-    from matplotlib.patches import Circle
+    # Paleta / estilo
+    COLOR_SINK   = "blue"
+    COLOR_FIXED0 = "gray"    # não instalado
+    COLOR_FIXED1 = "green"   # instalado
+    COLOR_MOBILE = "black"
+    COLOR_LINK   = "red"
+
+    S_SINK   = 260
+    S_FIXED0 = 40
+    S_FIXED1 = 120
+    S_MOBILE = 80
 
     # Pasta de frames
     frames_dir = "./frames_gif"
@@ -168,17 +177,15 @@ def save_routes2_gif(
         shutil.rmtree(frames_dir)
     os.makedirs(frames_dir, exist_ok=True)
 
-    # Limiares e aparência
     FLOW_EPS = 1e-6
-    NODE_S_SMALL = 40
-    NODE_S_BIG = 120
 
-    # Pré-computar trajetórias para contexto (AGORA com quebras/NaN)
-    # close=False evita "fechar" caminhos abertos; jump_factor controla sensibilidade de quebra
+    # Trajetórias com quebras
     traj_cache = {
         name: _traj_with_breaks(r_mobile, name, T, close=False, jump_factor=jump_factor)
         for name in mob_names
     }
+
+    installed_set = set(installed)
 
     def _pos_node(n, t):
         if n[0] == "sink":
@@ -190,35 +197,35 @@ def save_routes2_gif(
         raise ValueError("nó desconhecido")
 
     def _draw_frame(t):
-        """Desenha e retorna um objeto PIL.Image do frame do tempo t."""
         fig = plt.figure(figsize=(10, 8))
         ax = plt.gca()
 
-        # Todos candidatos (sem círculos)
+        # Fixos não instalados (cinza)
         for j in F:
-            q = q_fixed[j]
-            ax.scatter([q[0]], [q[1]], marker='s', s=NODE_S_SMALL, alpha=0.6, label=None)
+            if j not in installed_set:
+                q = q_fixed[j]
+                ax.scatter([q[0]], [q[1]], marker='s', s=S_FIXED0, c=COLOR_FIXED0, alpha=0.9)
 
-        # Instalados (sem círculos)
+        # Fixos instalados (verde)
         for j in installed:
             q = q_fixed[j]
-            ax.scatter([q[0]], [q[1]], marker='s', s=NODE_S_BIG, label=None)
+            ax.scatter([q[0]], [q[1]], marker='s', s=S_FIXED1, c=COLOR_FIXED1)
 
-        # Sink (sem círculo)
-        ax.scatter([q_sink[0]], [q_sink[1]], marker='*', s=180, label=None)
+        # Sink (estrela azul)
+        ax.scatter([q_sink[0]], [q_sink[1]], marker='*', s=S_SINK, c=COLOR_SINK)
 
-        # Trajetórias dos móveis – agora usando as trajetórias com quebras (tracejado)
+        # Trajetórias dos móveis (pretas tracejadas)
         for name in mob_names:
             traj = traj_cache[name]
-            ax.plot(traj[:, 0], traj[:, 1], linestyle='--', linewidth=2, alpha=0.7, label=None)
+            ax.plot(traj[:, 0], traj[:, 1], linestyle=':', linewidth=2, alpha=0.6, c=COLOR_MOBILE)
 
-        # Posição atual de cada móvel (ponto + círculo de alcance)
+        # Posição atual de cada móvel (pretos) + círculo de alcance (opcional, preto tracejado)
         for name in mob_names:
             pm = r_mobile(name, t)
-            ax.scatter([pm[0]], [pm[1]], marker='o', s=60, label=None)
-            ax.add_patch(Circle((pm[0], pm[1]), R_comm, fill=False, linewidth=1, ls='--'))
+            ax.scatter([pm[0]], [pm[1]], marker='o', s=S_MOBILE, c=COLOR_MOBILE)
+            ax.add_patch(Circle((pm[0], pm[1]), R_comm, fill=False, linewidth=1, ls='--', edgecolor=COLOR_MOBILE, alpha=0.6))
 
-        # Arestas ativas; evidenciar rotas que envolvem móveis com tracejado
+        # Links ativos (vermelho sólido, sem distinção)
         flows = {
             (i, j): x_val.get((i, j, t), 0.0)
             for (i, j) in E_t.get(t, [])
@@ -226,13 +233,7 @@ def save_routes2_gif(
         }
         for (i, j), val in flows.items():
             pi, pj = _pos_node(i, t), _pos_node(j, t)
-            is_mobile_route = (i[0] == "m") or (j[0] == "m")
-            ls = '--' if is_mobile_route else '-'
-            lw = 2.5 if is_mobile_route else 1.5
-            alpha = 0.95 if is_mobile_route else 0.7
-            ax.plot([pi[0], pj[0]], [pi[1], pj[1]], linewidth=lw, linestyle=ls, alpha=alpha)
-            cx, cy = (pi[0] + pj[0]) / 2, (pi[1] + pj[1]) / 2
-            ax.text(cx, cy, f"{val:.2f}", fontsize=8)
+            ax.plot([pi[0], pj[0]], [pi[1], pj[1]], linewidth=2.4, linestyle='-', c=COLOR_LINK, alpha=0.95)
 
         ax.set_title(f"Rotas de comunicação (t = {t})")
         ax.axis('equal')
@@ -240,18 +241,15 @@ def save_routes2_gif(
         if region and len(region) == 4:
             ax.set_xlim(region[0], region[2])
             ax.set_ylim(region[1], region[3])
-
         plt.tight_layout()
 
-        # Renderizar figura para buffer → PIL.Image
         buf = io.BytesIO()
         fig.canvas.print_png(buf)
         plt.close(fig)
         buf.seek(0)
-        img = Image.open(buf).convert("P")  # paleta para GIF
+        img = Image.open(buf).convert("P")
         return img
 
-    # Gerar e salvar frames individuais + montar GIF
     frames = []
     for t in range(1, T + 1):
         img = _draw_frame(t)
@@ -259,14 +257,14 @@ def save_routes2_gif(
         img.convert("RGB").save(frame_path, format="PNG")
         frames.append(img)
 
-    # Salvar GIF (loop infinito)
     gif_path = "./routes2.gif"
     if frames:
         frames[0].save(
             gif_path,
             save_all=True,
             append_images=frames[1:],
-            duration=int(1000 / max(1, fps)),  # ms por frame
+            duration=int(1000 / max(1, fps)),
             loop=0
         )
     return gif_path
+
