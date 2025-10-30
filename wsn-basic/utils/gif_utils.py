@@ -41,7 +41,11 @@ def _traj_with_breaks(r_mobile, name, T, close=False, jump_factor=5.0):
         pts = np.array(rows, dtype=float)
     return pts    
 
-def save_routes_gif(installed, r_mobile, mob_names, q_sink, q_fixed, R_comm, region, x_val, E_t, T, F):
+
+def save_routes_gif(
+    installed, r_mobile, mob_names, q_sink, q_fixed, R_comm, region,
+    x_val, E_t, T, F, *, jump_factor: float = 5.0, fps: int = 5
+):
     # Pasta de frames
     frames_dir = "./frames_gif"
     if os.path.isdir(frames_dir):
@@ -53,8 +57,11 @@ def save_routes_gif(installed, r_mobile, mob_names, q_sink, q_fixed, R_comm, reg
     NODE_S_SMALL = 40
     NODE_S_BIG = 120
 
-    # Pré-computar trajetórias para contexto (uma vez só)
-    traj_cache = {name: np.array([r_mobile(name, t) for t in range(1, T+1)]) for name in mob_names}
+    # Pré-computar trajetórias para contexto (AGORA com quebras/NaN)
+    traj_cache = {
+        name: _traj_with_breaks(r_mobile, name, T, close=False, jump_factor=jump_factor)
+        for name in mob_names
+    }
 
     def _pos_node(n, t):
         if n[0] == "sink":
@@ -85,7 +92,7 @@ def save_routes_gif(installed, r_mobile, mob_names, q_sink, q_fixed, R_comm, reg
         ax.scatter([q_sink[0]], [q_sink[1]], marker='*', s=180, label=None)
         ax.add_patch(Circle((q_sink[0], q_sink[1]), R_comm, fill=False, linewidth=1, ls='--'))
 
-        # Trajetórias (linhas claras para contexto)
+        # Trajetórias (linhas claras para contexto) — agora com quebras
         for name in mob_names:
             traj = traj_cache[name]
             ax.plot(traj[:, 0], traj[:, 1], linestyle='-', alpha=0.25, label=None)
@@ -96,7 +103,11 @@ def save_routes_gif(installed, r_mobile, mob_names, q_sink, q_fixed, R_comm, reg
             ax.scatter([pm[0]], [pm[1]], marker='o', s=60, label=None)
 
         # Arestas ativas (x_ij(t) > FLOW_EPS)
-        flows = {(i, j): x_val[(i, j, t)] for (i, j) in E_t[t] if x_val[(i, j, t)] > FLOW_EPS}
+        flows = {
+            (i, j): x_val.get((i, j, t), 0.0)
+            for (i, j) in E_t.get(t, [])
+            if x_val.get((i, j, t), 0.0) > FLOW_EPS
+        }
         for (i, j), val in flows.items():
             pi, pj = _pos_node(i, t), _pos_node(j, t)
             ax.plot([pi[0], pj[0]], [pi[1], pj[1]], linewidth=2)
@@ -135,13 +146,15 @@ def save_routes_gif(installed, r_mobile, mob_names, q_sink, q_fixed, R_comm, reg
             gif_path,
             save_all=True,
             append_images=frames[1:],
-            duration=500,   # ms por frame (2 fps); ajuste aqui
-            loop=0          # 0 = loop infinito
+            duration=int(1000 / max(1, fps)),   # ms por frame (default 2 fps)
+            loop=0                               # 0 = loop infinito
         )
+    return gif_path
+
         
 def save_routes2_gif(
     installed, r_mobile, mob_names, q_sink, q_fixed, R_comm, region,
-    x_val, E_t, T, F, *, jump_factor: float = 5.0, fps: int = 10
+    x_val, E_t, T, F, *, jump_factor: float = 5.0, fps: int = 5
 ):
     import os, io, shutil
     from PIL import Image
