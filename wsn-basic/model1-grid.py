@@ -2,7 +2,7 @@ import numpy as np
 
 # bibliotecas locais
 from utils.sim_utils import load_simulation_json
-from utils.sim_utils import add_random_fixed_motes
+from utils.grid_utils import add_grid_fixed_motes
 from utils.sim_utils import make_mobile_trajectory_fn
 from utils.plot_utils import plot_candidates_and_paths
 from utils.plot_utils import plot_solution
@@ -21,14 +21,13 @@ except Exception as e:
 # Entrada
 # ==============================
 SIM_JSON_PATH = "./input.json"   # ajuste conforme necessário
-ADD_RANDOM = True                # True para injetar candidatos aleatórios
 
 # 1) Carrega JSON base
 sim = load_simulation_json(SIM_JSON_PATH)
 
-# 2) Adiciona fixos aleatórios (opcional)
-if ADD_RANDOM:
-    sim = add_random_fixed_motes(sim, n_new=25, seed=71)
+# 2) Adiciona grid
+#sim = add_triangular_grid_fixed_motes(sim, rows=6, cols=6, d=40.0)
+sim = add_grid_fixed_motes(sim, rows=5, cols=7, d=45.0)
 
 # ==============================
 # Construção dos conjuntos/posições a partir do JSON

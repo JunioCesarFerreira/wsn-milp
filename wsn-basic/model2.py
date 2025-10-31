@@ -47,10 +47,10 @@ region   = sim.get("region", [-200, -200, 200, 200])
 fixed_list  = sim["simulationElements"]["fixedMotes"]
 mobile_list = sim["simulationElements"]["mobileMotes"]
 
-#parâmetros do modelo
+# parâmetros do modelo
 cap0 = 10
 kdecay = 0.1
-lambda_y = 10
+lambda_y = 10.0
 lambda_x = 0.01
 
 # sink
@@ -107,22 +107,44 @@ def pos_node(n, t):
 b = {(name, t): 1.0 for name in mob_names for t in range(1, T + 1)}
 
 # ==============================
+# Pré-processamento de interferência: K_j, k_j
+# ==============================
+# K_j = { q_i em Q | R_comm <= ||q_i - q_j|| <= R_interf }, para j in J
+# Aqui definimos Q como {todos os fixos candidatos} U {sink} (incluir o sink penaliza fixos próximos ao sink).
+Q_nodes = F + [sink]  # incluir sink é uma escolha de modelagem; remova se não desejar
+Q_pos = {**q_fixed, sink: q_sink}
+
+def annulus_neighbors_count(j_node):
+    pj = q_fixed[j_node]
+    cnt = 0
+    for qn in Q_nodes:
+        if qn == j_node:
+            continue
+        pi = Q_pos[qn]
+        d = np.linalg.norm(pi - pj)
+        if (d >= R_comm) and (d <= R_interf):
+            cnt += 1
+    return cnt
+
+k = {j: annulus_neighbors_count(j) for j in F}  # k_j = |K_j|
+
+# ==============================
 # Modelo Gurobi
 # ==============================
 
-mdl = gp.Model("WSN_Placement_Routing")
+mdl = gp.Model("WSN_Placement_Routing_InterferencePenalty")
 mdl.Params.OutputFlag = 1  # 0 para silenciar logs
 
 def link_possible(pi, pj):
     return np.linalg.norm(pi - pj) <= R_comm
 
 def capacity(pi, pj):
-    # ajustar depois
+    # C_{ij}(t) = max(0, cap0 * (1 - kdecay * d)^2)
     d = np.linalg.norm(pi - pj)
-    return max(0.0, cap0 * (1 - kdecay * d)**2)
+    return max(0.0, cap0 * (1 - kdecay * d) ** 2)
 
 def link_cost(pi, pj):
-    # ajustar depois
+    # dtilde_{ij}(t) = lambda_x * ||pi - pj||
     d = np.linalg.norm(pi - pj)
     return lambda_x * d
 
@@ -166,10 +188,10 @@ for t in range(1, T + 1):
 mdl.update()
 
 # --------------------------------------------
-# Objetivo
-#   min  sum_j y_j  +  sum_t sum_(i,j) d_ij(t) * x_ij(t)
+# Objetivo (Modelo 2)
+#   min  lambda_y * sum_j k_j y_j  +  sum_t sum_(i,j) dtilde_ij(t) * x_ij(t)
 # --------------------------------------------
-obj_install = gp.quicksum(lambda_y * y[j] for j in F)
+obj_install = gp.quicksum(lambda_y * (k[j] + y[j]) for j in F)
 obj_flow = gp.quicksum(
     cost[(i, j, t)] * xvar[(i, j, t)]
     for t in range(1, T + 1)
@@ -195,7 +217,7 @@ for t in range(1, T + 1):
         if j[0] == "f":  # j é um candidato fixo
             mdl.addConstr(z[(i, j, t)] <= y[j], name=f"inst_j_{i}_{j}_t{t}")
 
-# (3) Capacidade: 0 ≤ x_ij(t) ≤ C * z_ij(t)
+# (3) Capacidade: 0 ≤ x_ij(t) ≤ C_ij(t) * z_ij(t)
 for t in range(1, T + 1):
     for (i, j) in E_t[t]:
         mdl.addConstr(
@@ -218,7 +240,7 @@ for t in range(1, T + 1):
         inflow  = gp.quicksum(xvar[(j, i, t)] for (j, jj) in E_t[t] if jj == i)
         mdl.addConstr(outflow - inflow == 0.0, name=f"flow_fixed_{i}_t{t}")
 
-# (6) Balanço no sink s:  sum_in - sum_out = sum_m b_{m,t}
+# (6) Balanço no sink s: sum_in = sum_m b_{m,t}
 for t in range(1, T + 1):
     inflow_s  = gp.quicksum(xvar[(i, sink, t)] for (i, j) in E_t[t] if j == sink)
     total_bt  = gp.quicksum(b[(name, t)] for name in mob_names)
