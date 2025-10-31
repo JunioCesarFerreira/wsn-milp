@@ -276,9 +276,6 @@ installed = [j for j, v in y_val.items() if v > 0.5]
 x_val = {(i, j, t): xvar[(i, j, t)].X for t in range(1, T + 1) for (i, j) in E_t[t]}
 z_val = {(i, j, t): z[(i, j, t)].X for t in range(1, T + 1) for (i, j) in E_t[t]}
 
-# snapshot
-t_plot = max(1, min(3, T))
-
 plot_solution(
     F=F, installed=installed, q_fixed=q_fixed, q_sink=q_sink, R_comm=R_comm,
     mob_names=mob_names, T=T, r_mobile=r_mobile, 
