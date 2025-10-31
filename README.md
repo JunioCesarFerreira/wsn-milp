@@ -1,16 +1,29 @@
 # Modelo Inicial
 
-## Definições
-$K_j=\{q_i\in Q:R_{com}\le\|q_i-q_j\|_2\le R_{inter}\}$
+## Pré-processamento
 
-$k_j=|K_j|$
+$$
+d_{ij}(t)=\|p_i(t)-p_j(t)\|_2
+$$
 
-## Modelo
+$$
+A_{ij}(t)=\begin{cases}
+1,\quad &d_{ij}(t)\le R_{com},\\
+0, & \text{caso contrário}.
+\end{cases}
+$$
+
+$$
+C_{ij}(t)=\max\Big\{0, C_0\big(1-k_{decay}d_{ij}(t)\big)^2\Big\}
+$$
+
+
+## Modelo 1
 $$
 \begin{aligned}
 \min_{y,z,x}\quad
-& \sum_{j\in\mathcal J} k_j y_j
-+ \sum_{t\in\mathcal T}
+& \lambda_y\sum_{j\in\mathcal J} y_j
++ \lambda_x\sum_{t\in\mathcal T}
   \sum_{(i,j)\in \mathcal E_t}
   d_{ij}(t) x_{ij}(t)
 \\[0.4em]
@@ -21,7 +34,7 @@ $$
 & z_{ij}(t)\le y_i,\quad z_{ij}(t)\le y_j,
 && \forall (i,j)\in\mathcal E_t,\ i,j\in\mathcal J,\ \forall t,
 \\[0.25em]
-& 0\le x_{ij}(t)\le C\,z_{ij}(t),
+& 0\le x_{ij}(t)\le C_{ij}(t)\,z_{ij}(t),
 && \forall (i,j)\in\mathcal E_t,\ \forall t,
 \\[0.25em]
 & \sum_{j:(m,j)\in \mathcal E_t} x_{mj}(t)
@@ -41,3 +54,10 @@ $$
 & y_j\in\{0,1\},\quad z_{ij}(t)\in\{0,1\},\quad x_{ij}(t)\ge 0.
 \end{aligned}
 $$
+
+## Modelo 2
+
+### Definições
+$K_j=\big\{q_i\in Q\;\big|\;R_{\text{com}}\le\|q_i-q_j\|_2\le R_{\text{inter}}\big\}$
+
+$k_j=|K_j|$

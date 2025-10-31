@@ -28,7 +28,7 @@ sim = load_simulation_json(SIM_JSON_PATH)
 
 # 2) Adiciona fixos aleatórios (opcional)
 if ADD_RANDOM:
-    sim = add_random_fixed_motes(sim, n_new=10, seed=42)
+    sim = add_random_fixed_motes(sim, n_new=50, seed=71)
 
 # ==============================
 # Construção dos conjuntos/posições a partir do JSON
@@ -46,6 +46,12 @@ region   = sim.get("region", [-200, -200, 200, 200])
 
 fixed_list  = sim["simulationElements"]["fixedMotes"]
 mobile_list = sim["simulationElements"]["mobileMotes"]
+
+#parâmetros do modelo
+cap0 = 10
+kdecay = 0.1
+lambda_y = 10
+lambda_x = 0.01
 
 # sink
 sink_name = None
@@ -112,11 +118,13 @@ def link_possible(pi, pj):
 
 def capacity(pi, pj):
     # ajustar depois
-    return np.linalg.norm(pi - pj)
+    d = np.linalg.norm(pi - pj)
+    return max(0.0, cap0 * (1 - kdecay * d)**2)
 
 def link_cost(pi, pj):
     # ajustar depois
-    return 10
+    d = np.linalg.norm(pi - pj)
+    return lambda_x * d
 
 E_t = {}
 A = {}
@@ -161,7 +169,7 @@ mdl.update()
 # Objetivo
 #   min  sum_j y_j  +  sum_t sum_(i,j) d_ij(t) * x_ij(t)
 # --------------------------------------------
-obj_install = gp.quicksum(y[j] for j in F)
+obj_install = gp.quicksum(lambda_y * y[j] for j in F)
 obj_flow = gp.quicksum(
     cost[(i, j, t)] * xvar[(i, j, t)]
     for t in range(1, T + 1)
@@ -213,9 +221,8 @@ for t in range(1, T + 1):
 # (6) Balanço no sink s:  sum_in - sum_out = sum_m b_{m,t}
 for t in range(1, T + 1):
     inflow_s  = gp.quicksum(xvar[(i, sink, t)] for (i, j) in E_t[t] if j == sink)
-    outflow_s = gp.quicksum(xvar[(sink, j, t)] for (i, j) in E_t[t] if i == sink)
     total_bt  = gp.quicksum(b[(name, t)] for name in mob_names)
-    mdl.addConstr(inflow_s - outflow_s == total_bt, name=f"flow_sink_t{t}")
+    mdl.addConstr(inflow_s == total_bt, name=f"flow_sink_t{t}")
 
 # plot candidatos
 plot_candidates_and_paths(
