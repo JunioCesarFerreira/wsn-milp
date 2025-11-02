@@ -2,10 +2,11 @@ import numpy as np
 
 # bibliotecas locais
 from utils.sim_utils import load_simulation_json
-from utils.grid_utils import add_grid_fixed_motes
+from utils.grid_utils import add_triangular_grid_fixed_motes
 from utils.sim_utils import make_mobile_trajectory_fn
 from utils.plot_utils import plot_candidates_and_paths
 from utils.plot_utils import plot_solution
+from utils.plot_utils import plot_installed_graph
 from utils.gif_utils import save_routes_gif, save_routes2_gif
 
 # ==============================
@@ -26,8 +27,8 @@ SIM_JSON_PATH = "./input.json"   # ajuste conforme necessário
 sim = load_simulation_json(SIM_JSON_PATH)
 
 # 2) Adiciona grid
-#sim = add_triangular_grid_fixed_motes(sim, rows=6, cols=6, d=40.0)
-sim = add_grid_fixed_motes(sim, rows=5, cols=7, d=45.0)
+sim = add_triangular_grid_fixed_motes(sim, rows=6, cols=6, d=40.0)
+#sim = add_grid_fixed_motes(sim, rows=5, cols=7, d=45.0)
 
 # ==============================
 # Construção dos conjuntos/posições a partir do JSON
@@ -49,8 +50,7 @@ mobile_list = sim["simulationElements"]["mobileMotes"]
 #parâmetros do modelo
 cap0 = 10
 kdecay = 0.1
-lambda_y = 10
-lambda_x = 0.01
+alpha_yx = 1000
 
 # sink
 sink_name = None
@@ -123,7 +123,7 @@ def capacity(pi, pj):
 def link_cost(pi, pj):
     # ajustar depois
     d = np.linalg.norm(pi - pj)
-    return lambda_x * d
+    return d
 
 E_t = {}
 A = {}
@@ -168,7 +168,7 @@ mdl.update()
 # Objetivo
 #   min  sum_j y_j  +  sum_t sum_(i,j) d_ij(t) * x_ij(t)
 # --------------------------------------------
-obj_install = gp.quicksum(lambda_y * y[j] for j in F)
+obj_install = gp.quicksum(alpha_yx * y[j] for j in F)
 obj_flow = gp.quicksum(
     cost[(i, j, t)] * xvar[(i, j, t)]
     for t in range(1, T + 1)
@@ -254,12 +254,17 @@ x_val = {(i, j, t): xvar[(i, j, t)].X for t in range(1, T + 1) for (i, j) in E_t
 z_val = {(i, j, t): z[(i, j, t)].X for t in range(1, T + 1) for (i, j) in E_t[t]}
 
 plot_solution(
-    F=F, installed=installed, q_fixed=q_fixed, q_sink=q_sink, R_comm=R_comm,
+    F=F, installed=installed, q_fixed=q_fixed, q_sink=q_sink, R_comm=R_comm, R_inter=R_interf,
     mob_names=mob_names, T=T, r_mobile=r_mobile, 
     region=region, out_path="./pic2.png"
 )
 
-save_routes_gif(installed, r_mobile, mob_names, q_sink, q_fixed, R_comm, region, x_val, E_t, T, F)
-save_routes2_gif(installed, r_mobile, mob_names, q_sink, q_fixed, R_comm, region, x_val, E_t, T, F)
+plot_installed_graph(
+    installed=installed, q_fixed=q_fixed, q_sink=q_sink, R_comm=R_comm,
+    region=region, out_path="./pic_installed_graph.png"
+)
+
+save_routes_gif(installed, r_mobile, mob_names, q_sink, q_fixed, R_comm, region, x_val, E_t, T, F, ".")
+save_routes2_gif(installed, r_mobile, mob_names, q_sink, q_fixed, R_comm, region, x_val, E_t, T, F, ".")
 
 print("Done.")

@@ -22,8 +22,8 @@ $$
 $$
 \begin{aligned}
 \min_{y,z,x}\quad
-& \lambda_y\sum_{j\in\mathcal J} y_j
-+ \lambda_x\sum_{t\in\mathcal T}
+& \alpha_{yx}\sum_{j\in\mathcal J} y_j
++ \sum_{t\in\mathcal T}
   \sum_{(i,j)\in \mathcal E_t}
   d_{ij}(t) x_{ij}(t)
 \\[0.4em]
@@ -62,19 +62,19 @@ $$
 ## Pré-processamento
 
 $$
-K_j=\big\{q_i\in Q\;\big|\;R_{\text{com}}\le\|q_i-q_j\|_2\le R_{\text{inter}}\big\},\quad\forall j\in\mathcal J
+\Eta_j=\big\{q_i\in Q\;\big|\;R_{\text{com}}\le\|q_i-q_j\|_2\le R_{\text{inter}}\big\},\quad\forall j\in\mathcal J
 $$
 
 $$
-k_j=|K_j|
+\eta_j=|\Eta_j|+1
 $$
 
 ## Modelo 2
 $$
 \begin{aligned}
 \min_{y,z,x}\quad
-& \lambda_y\sum_{j\in\mathcal J} (k_j+y_j)
-+ \lambda_x\sum_{t\in\mathcal T}
+& \alpha_{yx}\sum_{j\in\mathcal J} (\alpha_{\text{inter}} \eta_j+1)y_j
++ \sum_{t\in\mathcal T}
   \sum_{(i,j)\in \mathcal E_t}
   d_{ij}(t) x_{ij}(t)
 \\[0.4em]
