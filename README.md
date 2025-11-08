@@ -108,27 +108,27 @@ $$
 
 ---
 
-# Incluindo Interferência Grafo de Conflitos
+# Incluindo Interferência como Peso
 
-## Pré-processamento
+## Penalizando Interferência
 
 $$
-I_{(i,j),(k,l)}(t) =
-\begin{cases}
-1, & \text{se } (i,j)\neq(k,l)\ \text{e}\ 
-\min\{\|p_i(t)-p_k(t)\|_2,\|p_j(t)-p_l(t)\|_2\}<R_\text{inter},\\[0.25em]
-0, & \text{caso contrário.}
+w_{ij}(t):=\begin{cases}
+d_{ij}(t)^2,\quad&\text{se }0<d_{ij}(t)\le R_C,\\
+(R_I-d_{ij}(t))^2, &\text{se }R_C<d_{ij}(t)\le R_I,\\
+0, &\text{caso contrário.}
 \end{cases}
 $$
+
 
 ## Modelo 3
 $$
 \begin{aligned}
 \min_{y,z,x}\quad
-& \alpha_{yx}\sum_{j\in\mathcal J} (\alpha_{\text{inter}} \eta_j+1)y_j
+& \alpha_{yx}\sum_{j\in\mathcal J} y_j
 + \sum_{t\in\mathcal T}
   \sum_{(i,j)\in \mathcal E_t}
-  d_{ij}^2(t) x_{ij}(t)
+  w_{ij}(t) x_{ij}(t)
 \\[0.4em]
 \text{s.a.}\quad
 & z_{ij}(t)\le A_{ij}(t),
@@ -156,4 +156,29 @@ $$
 \\[0.25em]
 & y_j\in\{0,1\},\quad z_{ij}(t)\in\{0,1\},\quad x_{ij}(t)\ge 0.
 \end{aligned}
+$$
+
+
+
+
+
+---
+
+Trechos que ainda vou usar...
+
+$$
+w_{ij}(t):=\begin{cases}
+10 n \log_{10}(d_{ij}(t)),\quad&\text{se }0<d_{ij}(t)\le R_C,\\
+10 n \log_{10}(R_I-d_{ij}(t)), &\text{se }R_C<d_{ij}(t)\le R_I,\\
+0, &\text{caso contrário.}
+\end{cases}
+$$
+
+$$
+I_{(i,j),(k,l)}(t) =
+\begin{cases}
+1, & \text{se } (i,j)\neq(k,l)\ \text{e}\ 
+\min\{\|p_i(t)-p_k(t)\|_2,\|p_j(t)-p_l(t)\|_2\}<R_\text{inter},\\[0.25em]
+0, & \text{caso contrário.}
+\end{cases}
 $$
