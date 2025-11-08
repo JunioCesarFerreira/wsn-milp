@@ -1,4 +1,5 @@
 import numpy as np
+import json
 
 # bibliotecas locais
 from utils.sim_utils import load_simulation_json
@@ -29,7 +30,7 @@ sim = load_simulation_json(SIM_JSON_PATH)
 
 # 2) Adiciona fixos aleatórios (opcional)
 if ADD_RANDOM:
-    sim = add_random_fixed_motes(sim, n_new=50, seed=71)
+    sim = add_random_fixed_motes(sim, n_new=40, seed=71)
 
 # ==============================
 # Construção dos conjuntos/posições a partir do JSON
@@ -51,7 +52,7 @@ mobile_list = sim["simulationElements"]["mobileMotes"]
 #parâmetros do modelo
 cap0 = 10
 kdecay = 0.1
-alpha_yx = 1000
+alpha_yx = 1000**2
 
 # sink
 sink_name = None
@@ -124,7 +125,7 @@ def capacity(pi, pj):
 def link_cost(pi, pj):
     # ajustar depois
     d = np.linalg.norm(pi - pj)
-    return d
+    return d**2
 
 E_t = {}
 A = {}
@@ -254,6 +255,28 @@ installed = [j for j, v in y_val.items() if v > 0.5]
 x_val = {(i, j, t): xvar[(i, j, t)].X for t in range(1, T + 1) for (i, j) in E_t[t]}
 z_val = {(i, j, t): z[(i, j, t)].X for t in range(1, T + 1) for (i, j) in E_t[t]}
 
+fixed_motes_out = []                 
+fixed_motes_out.append({
+    "position": [0.0, 0.0],
+    "name": "root",
+    "sourceCode": "node.c"
+})
+count = 1
+for j in installed:
+    pos = q_fixed[j]                 
+    name = j[1]                     
+    fixed_motes_out.append({
+        "position": [float(pos[0]), float(pos[1])],
+        "name": f"node{count}",
+        "sourceCode": "node.c"
+    })
+    count+=1
+
+sim["simulationElements"]["fixedMotes"] = fixed_motes_out
+
+with open("./results/model1/output.json", "w", encoding="utf-8") as f:
+    json.dump(sim, f, ensure_ascii=False, indent=4)
+    
 plot_solution(
     F=F, installed=installed, q_fixed=q_fixed, q_sink=q_sink, R_comm=R_comm, R_inter=R_interf,
     mob_names=mob_names, T=T, r_mobile=r_mobile, 

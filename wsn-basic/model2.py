@@ -51,7 +51,7 @@ mobile_list = sim["simulationElements"]["mobileMotes"]
 # parâmetros do modelo
 cap0 = 10
 kdecay = 0.1
-alpha_yx = 1000.0
+alpha_yx = 1000.0**2
 alpha_interf = 1000.0
 
 # sink
@@ -147,7 +147,7 @@ def capacity(pi, pj):
 def link_cost(pi, pj):
     # dtilde_{ij}(t) = lambda_x * ||pi - pj||
     d = np.linalg.norm(pi - pj)
-    return d
+    return d**2
 
 E_t = {}
 A = {}
