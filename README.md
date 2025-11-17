@@ -1,6 +1,8 @@
-# Modelo Inicial
+# Modelos Iniciais
 
-## Pré-processamento
+## Problema com Mobilidade
+
+### Pré-processamento
 
 $$
 d_{ij}(t)=\|p_i(t)-p_j(t)\|_2
@@ -18,7 +20,7 @@ C_{ij}(t)=\max\Big\{0, C_0\big(1-k_{decay}d_{ij}(t)\big)^2\Big\}
 $$
 
 
-## Modelo 1
+### Modelo 1
 $$
 \begin{aligned}
 \min_{y,z,x}\quad
@@ -57,9 +59,26 @@ $$
 
 ---
 
-# Incluindo Interferência Custo Local
+## Incluindo Interferência Custo Local
 
-## Pré-processamento
+### Pré-processamento
+
+$$
+d_{ij}(t)=\|p_i(t)-p_j(t)\|_2
+$$
+
+$$
+A_{ij}(t)=\begin{cases}
+1,\quad &d_{ij}(t)\le R_{com},\\
+0, & \text{caso contrário}.
+\end{cases}
+$$
+
+$$
+C_{ij}(t)=\max\Big\{0, C_0\big(1-k_{decay}d_{ij}(t)\big)^2\Big\}
+$$
+
+### Penalizando Interferência
 
 $$
 \Eta_j=\big\{q_i\in Q\;\big|\;R_{\text{com}}\le\|q_i-q_j\|_2\le R_{\text{inter}}\big\},\quad\forall j\in\mathcal J
@@ -69,7 +88,7 @@ $$
 \eta_j=|\Eta_j|+1
 $$
 
-## Modelo 2
+### Modelo 2
 $$
 \begin{aligned}
 \min_{y,z,x}\quad
@@ -108,9 +127,26 @@ $$
 
 ---
 
-# Incluindo Interferência como Peso
+## Incluindo Interferência como Peso
 
-## Penalizando Interferência
+### Pré-processamento
+
+$$
+d_{ij}(t)=\|p_i(t)-p_j(t)\|_2
+$$
+
+$$
+A_{ij}(t)=\begin{cases}
+1,\quad &d_{ij}(t)\le R_{com},\\
+0, & \text{caso contrário}.
+\end{cases}
+$$
+
+$$
+C_{ij}(t)=\max\Big\{0, C_0\big(1-k_{decay}d_{ij}(t)\big)^2\Big\}
+$$
+
+### Penalizando Interferência
 
 $$
 w_{ij}(t):=\begin{cases}
@@ -121,7 +157,7 @@ d_{ij}(t)^2,\quad&\text{se }0<d_{ij}(t)\le R_C,\\
 $$
 
 
-## Modelo 3
+### Modelo 3
 $$
 \begin{aligned}
 \min_{y,z,x}\quad
@@ -158,7 +194,49 @@ $$
 \end{aligned}
 $$
 
+---
 
+# Problema Estático
+
+### Modelo 1
+
+$$
+\begin{aligned}
+  \min_{y,z,x}\quad
+  & \alpha \sum_{j\in\mathcal{J}} y_j
+    + \sum_{(u,v)\in\mathcal{E}} w_{uv}\,z_{uv}\\
+  \text{s.a.}\quad
+  & \sum_{j\in\mathcal{J}} a_{ij}\,y_j \;\ge\; k,
+    && \forall i\in\mathcal{T},\\
+  & z_{uv} \le y_u,\quad
+    z_{uv} \le y_v,
+    && \forall (u,v)\in\mathcal{E}\cap(\mathcal{J}\times\mathcal{J}),\\
+  & z_{sj} \le y_j,\quad z_{js} \le y_j,
+    && \forall j\in\mathcal{J} \text{, } (s,j),(j,s)\in\mathcal{E},\\
+  & 0 \le x_{uv} \le M\,z_{uv},
+    && \forall (u,v)\in\mathcal{E},\\
+  & \sum_{v:(j,v)\in\mathcal{E}} x_{jv}
+    - \sum_{u:(u,j)\in\mathcal{E}} x_{uj}
+    = y_j,
+    && \forall j\in\mathcal{J},\\
+  & \sum_{u:(u,s)\in\mathcal{E}} x_{us}
+    = \sum_{j\in\mathcal{J}} y_j,
+    && \text{(nó sink)},\\
+  & y_j \in \{0,1\},
+    && \forall j\in\mathcal{J},\\
+  & z_{uv} \in \{0,1\},
+    && \forall (u,v)\in\mathcal{E},\\
+  & f_{uv} \ge 0,
+    && \forall (u,v)\in\mathcal{E}.
+\end{aligned}
+$$
+
+---
+
+## Tarefa PDDL
+
+- Incluir variações de caminhos disparados por eventos.
+- Usar PDDL e ROS2 para realizar planejametos em tempo de execução.
 
 
 

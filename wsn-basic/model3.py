@@ -1,5 +1,6 @@
 import numpy as np
 import json
+from pathlib import Path
 
 # bibliotecas locais
 from utils.sim_utils import load_simulation_json
@@ -23,6 +24,7 @@ except Exception as e:
 # Entrada
 # ==============================
 SIM_JSON_PATH = "./input.json"   # ajuste conforme necessário
+RESULTS_PATH = Path("./results/model3")
 ADD_RANDOM = True                # True para injetar candidatos aleatórios
 
 # 1) Carrega JSON base
@@ -53,7 +55,6 @@ mobile_list = sim["simulationElements"]["mobileMotes"]
 cap0 = 10
 kdecay = 0.1
 alpha_yx = 1000.0**2
-alpha_interf = 1000.0
 
 # sink
 sink_name = None
@@ -107,28 +108,6 @@ def pos_node(n, t):
 
 # demanda: cada móvel gera 1.0 por tempo
 b = {(name, t): 1.0 for name in mob_names for t in range(1, T + 1)}
-
-# ==============================
-# Pré-processamento de interferência: Eta_j, eta_j
-# ==============================
-# Eta_j = { q_i em Q | R_comm <= ||q_i - q_j|| <= R_interf }, para j in J
-# Aqui definimos Q como {todos os fixos candidatos} U {sink} (incluir o sink penaliza fixos próximos ao sink).
-Q_nodes = F + [sink]  # incluir sink é uma escolha de modelagem; remova se não desejar
-Q_pos = {**q_fixed, sink: q_sink}
-
-def annulus_neighbors_count(j_node):
-    pj = q_fixed[j_node]
-    cnt = 0
-    for qn in Q_nodes:
-        if qn == j_node:
-            continue
-        pi = Q_pos[qn]
-        d = np.linalg.norm(pi - pj)
-        if (d >= R_comm) and (d <= R_interf):
-            cnt += 1
-    return cnt
-
-eta = {j: annulus_neighbors_count(j) for j in F}  # eta_j = |Eta_j|
 
 # ==============================
 # Modelo Gurobi
@@ -199,7 +178,7 @@ mdl.update()
 # Objetivo (Modelo 2)
 #   min  alpha_yx * sum_j (alpha_{inter} * k_j + 1) * y_j  +  sum_t sum_(i,j) dtilde_ij(t) * x_ij(t)
 # --------------------------------------------
-obj_install = gp.quicksum(((alpha_interf * eta[j] + 1) * y[j] + alpha_yx * y[j]) for j in F)
+obj_install = gp.quicksum((y[j] + alpha_yx * y[j]) for j in F)
 obj_flow = gp.quicksum(
     cost[(i, j, t)] * xvar[(i, j, t)]
     for t in range(1, T + 1)
@@ -257,7 +236,7 @@ for t in range(1, T + 1):
 # plot candidatos
 plot_candidates_and_paths(
     F=F, q_fixed=q_fixed, q_sink=q_sink, R_comm=R_comm,
-    mob_names=mob_names, r_mobile=r_mobile, T=T, region=region, out_path="./results/model2/pic_candidates.jpg"
+    mob_names=mob_names, r_mobile=r_mobile, T=T, region=region, out_path=RESULTS_PATH / "pic_candidates.jpg"
 )
 
 # Resolver
@@ -303,23 +282,23 @@ for j in installed:
 
 sim["simulationElements"]["fixedMotes"] = fixed_motes_out
 
-with open("./results/model1/output.json", "w", encoding="utf-8") as f:
+with open(RESULTS_PATH / "output.json", "w", encoding="utf-8") as f:
     json.dump(sim, f, ensure_ascii=False, indent=4)
     
 plot_solution(
     F=F, installed=installed, q_fixed=q_fixed, q_sink=q_sink, R_comm=R_comm, R_inter=R_interf,
     mob_names=mob_names, T=T, r_mobile=r_mobile, 
-    region=region, out_path="./results/model3/pic_installed.png"
+    region=region, out_path=RESULTS_PATH / "pic_installed.png"
 )
 
 plot_installed_graph(
     installed=installed, q_fixed=q_fixed, q_sink=q_sink, R_comm=R_comm,
-    region=region, out_path="./results/model3/pic_installed_graph.png"
+    region=region, out_path=RESULTS_PATH /"pic_installed_graph.png"
 )
 
 save_routes_gif(installed, r_mobile, mob_names, q_sink, q_fixed, R_comm, 
-                region, x_val, E_t, T, F, out_dir_path="./results/model3")
+                region, x_val, E_t, T, F, out_dir_path=RESULTS_PATH)
 save_routes2_gif(installed, r_mobile, mob_names, q_sink, q_fixed, R_comm, 
-                 region, x_val, E_t, T, F, out_dir_path="./results/model3")
+                 region, x_val, E_t, T, F, out_dir_path=RESULTS_PATH)
 
 print("Done.")

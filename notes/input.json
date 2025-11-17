@@ -1,0 +1,315 @@
+{
+  "simulationModel": {
+    "name": "single-experiment-sim-lab",
+    "duration": 60,
+    "radiusOfReach": 100,
+    "radiusOfInter": 200,
+    "region": [
+      -500,
+      -500,
+      500,
+      500
+    ],
+    "simulationElements": {
+      "fixedMotes": [
+        {
+          "position": [
+            0,
+            0
+          ],
+          "name": "root",
+          "sourceCode": "root.c"
+        },
+        {
+          "position": [
+            31,
+            -231
+          ],
+          "name": "node1",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            144,
+            -230
+          ],
+          "name": "node2",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            -88,
+            -229
+          ],
+          "name": "node3",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            -23,
+            -215
+          ],
+          "name": "node4",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            99,
+            -201
+          ],
+          "name": "node5",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            -131,
+            -200
+          ],
+          "name": "node6",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            -183,
+            -198
+          ],
+          "name": "node7",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            134,
+            -163
+          ],
+          "name": "node8",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            -59,
+            -162
+          ],
+          "name": "node9",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            -141,
+            -149
+          ],
+          "name": "node10",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            23,
+            -147
+          ],
+          "name": "node11",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            -100,
+            -135
+          ],
+          "name": "node12",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            81,
+            -125
+          ],
+          "name": "node13",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            -131,
+            -95
+          ],
+          "name": "node14",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            134,
+            -93
+          ],
+          "name": "node15",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            -60,
+            -90
+          ],
+          "name": "node16",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            32,
+            -68
+          ],
+          "name": "node17",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            174,
+            -56
+          ],
+          "name": "node18",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            -182,
+            -39
+          ],
+          "name": "node19",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            -29,
+            -36
+          ],
+          "name": "node20",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            -155,
+            -25
+          ],
+          "name": "node21",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            -86,
+            -24
+          ],
+          "name": "node22",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            74,
+            -23
+          ],
+          "name": "node23",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            104,
+            16
+          ],
+          "name": "node24",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            172,
+            17
+          ],
+          "name": "node25",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            -133,
+            33
+          ],
+          "name": "node26",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            -48,
+            34
+          ],
+          "name": "node27",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            45,
+            38
+          ],
+          "name": "node28",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            -107,
+            58
+          ],
+          "name": "node29",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            150,
+            85
+          ],
+          "name": "node30",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            -186,
+            92
+          ],
+          "name": "node31",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            -27,
+            95
+          ],
+          "name": "node32",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            89,
+            97
+          ],
+          "name": "node33",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            27,
+            123
+          ],
+          "name": "node34",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            -148,
+            131
+          ],
+          "name": "node35",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            130,
+            139
+          ],
+          "name": "node36",
+          "sourceCode": "node.c"
+        }
+      ],
+      "mobileMotes": []
+    }
+  }
+}

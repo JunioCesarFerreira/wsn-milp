@@ -2,7 +2,6 @@ import os, io, shutil
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle
-from pathlib import Path
 
 try:
     from PIL import Image
@@ -44,7 +43,7 @@ def _traj_with_breaks(r_mobile, name, T, close=False, jump_factor=5.0):
 
 def save_routes_gif(
     installed, r_mobile, mob_names, q_sink, q_fixed, R_comm, region,
-    x_val, E_t, T, F, out_dir_path: Path, *, jump_factor: float = 5.0, fps: int = 3
+    x_val, E_t, T, F, out_dir_path, *, jump_factor: float = 5.0, fps: int = 3
 ):
     # Paleta / estilo
     COLOR_SINK   = "blue"
@@ -59,7 +58,7 @@ def save_routes_gif(
     S_MOBILE = 80
 
     # Pasta de frames
-    frames_dir = out_dir_path / "frames_gif"
+    frames_dir = out_dir_path + "/frames_gif"
     if os.path.isdir(frames_dir):
         shutil.rmtree(frames_dir)
     os.makedirs(frames_dir, exist_ok=True)
@@ -143,7 +142,7 @@ def save_routes_gif(
         img.convert("RGB").save(frame_path, format="PNG")
         frames.append(img)
 
-    gif_path = out_dir_path / "routes.gif"
+    gif_path = out_dir_path + "/routes.gif"
     if frames:
         frames[0].save(
             gif_path,
@@ -158,7 +157,7 @@ def save_routes_gif(
         
 def save_routes2_gif(
     installed, r_mobile, mob_names, q_sink, q_fixed, R_comm, region,
-    x_val, E_t, T, F, out_dir_path: Path, *, jump_factor: float = 5.0, fps: int = 3
+    x_val, E_t, T, F, out_dir_path, *, jump_factor: float = 5.0, fps: int = 3
 ):
     # Paleta / estilo
     COLOR_SINK   = "blue"
@@ -173,7 +172,7 @@ def save_routes2_gif(
     S_MOBILE = 80
 
     # Pasta de frames
-    frames_dir = out_dir_path / "frames_gif"
+    frames_dir = out_dir_path + "/frames_gif"
     if os.path.isdir(frames_dir):
         shutil.rmtree(frames_dir)
     os.makedirs(frames_dir, exist_ok=True)
@@ -258,7 +257,7 @@ def save_routes2_gif(
         img.convert("RGB").save(frame_path, format="PNG")
         frames.append(img)
 
-    gif_path = out_dir_path / "routes2.gif"
+    gif_path = out_dir_path + "/routes2.gif"
     if frames:
         frames[0].save(
             gif_path,
