@@ -45,7 +45,7 @@ fixed_list  = sim["simulationElements"]["fixedMotes"]
 cap0 = 10.0
 kdecay = 0.1
 
-alpha = float(sim.get("alpha_install", 1e6))  # peso da instalação no objetivo
+w = float(sim.get("w_install", 1e6))  # peso da instalação no objetivo
 k_cov = int(sim.get("k_coverage", 2))         # nível de cobertura k
 
 # ------------------------------
@@ -186,7 +186,7 @@ mdl.update()
 obj_install = gp.quicksum(y[j] for j in J)
 obj_edges = gp.quicksum(w[(u, v)] * z[(u, v)] for (u, v) in E)
 
-mdl.setObjective(alpha * obj_install + obj_edges, GRB.MINIMIZE)
+mdl.setObjective(w * obj_install + obj_edges, GRB.MINIMIZE)
 
 # --------------------------------------------
 # Restrições
