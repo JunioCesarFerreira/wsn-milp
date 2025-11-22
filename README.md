@@ -3,7 +3,7 @@
 ## Preprocessing
 
 $$
-d_{ij}(t)=||p_i(t)-p_j(t)||_2
+d_{ij}(t)=\Vert p_i(t)-p_j(t) \Vert_2
 $$
 
 
@@ -31,7 +31,7 @@ $$
 
 
 $$
-\mathcal{E}_t=\big\lbrace(i,j)\in \mathcal{V}\times \mathcal{V}\;|\;0<d_{ij}(t)\le R_{\text{com}},\ i\neq j\big\rbrace
+\mathcal{E}_t=\big\lbrace(i,j)\in \mathcal{V}\times \mathcal{V}\ |\ 0<d_{ij}(t)\le R_{\text{com}},\ i\neq j\big\rbrace
 $$
 
 
@@ -41,7 +41,7 @@ $$
 \begin{aligned}
 \min_{y,z,x}\quad & w\sum_{j\in\mathcal J} y_j + \sum_{t\in\mathcal T}\sum_{(i,j)\in \mathcal E_t}e_{ij}(t) x_{ij}(t) \\
 \text{s.a.}\quad& z_{ij}(t)\le y_i,\quad z_{ij}(t)\le y_j,&& \forall (i,j)\in\mathcal E_t\cap(\mathcal{J}\times\mathcal{J}),\ \forall t\in\mathcal T,\\
-& z_{sj}(t) \le y_j,\quad z_{js}(t) \le y_j, && \forall j\in\mathcal{J}\ \text{com }(s,j),(j,s)\in\mathcal{E}_t,\ \forall t\in\mathcal T,\\
+& z_{sj}(t) \le y_j,\quad z_{js}(t) \le y_j, && \forall j\in\mathcal{J}\ | \ (s,j),(j,s)\in\mathcal{E}_t,\ \forall t\in\mathcal T,\\
 & 0\le x_{ij}(t)\le C_{ij}(t)\,z_{ij}(t), && \forall (i,j)\in\mathcal E_t,\ \forall t\in\mathcal T,\\
 & \sum_{i:(m,i)\in \mathcal E_t} x_{mi}(t) - \sum_{i:(i,m)\in \mathcal E_t} x_{im}(t) = b_{m,t},&& \forall m\in\mathcal M,\ \forall t\in\mathcal T,\\
 & \sum_{i:(j,i)\in \mathcal E_t} x_{ji}(t) - \sum_{i:(i,j)\in \mathcal E_t} x_{ij}(t) = 0,&& \forall j\in\mathcal J,\ \forall t\in\mathcal T,\\
