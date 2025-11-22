@@ -60,7 +60,7 @@ $$
 $$
 a_{hj} =
 \begin{cases}
-1, & \text{if } \|\xi_h - q_j\|_2 \le R_{\text{cov}},\\
+1, & \text{if } \Vert \xi_h - q_j\Vert_2 \le R_{\text{cov}},\\
 0, & \text{other cases,}
 \end{cases}
 $$
