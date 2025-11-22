@@ -25,7 +25,7 @@ SIM_JSON_PATH = "./input.json"   # ajuste conforme necessário
 RESULTS_PATH = Path("./output")
 RESULTS_PATH.mkdir(parents=True, exist_ok=True)
 
-# 1) Carrega JSON base
+# 1. Carrega JSON base
 sim = load_simulation_json(SIM_JSON_PATH)
 
 # ==============================
@@ -45,8 +45,9 @@ fixed_list  = sim["simulationElements"]["fixedMotes"]
 cap0 = 10.0
 kdecay = 0.1
 
-w = float(sim.get("w_install", 1e6))  # peso da instalação no objetivo
-k_cov = int(sim.get("k_coverage", 2))         # nível de cobertura k
+w_install = float(sim.get("w_install", 1e6))  # peso da instalação no objetivo
+k_cov = int(sim.get("k_coverage", 1))         # nível de cobertura k
+g_conn = int(sim.get("g_connectivity", 1))    # nível de conectividade g
 
 # ------------------------------
 # sink e nós fixos candidatos
@@ -186,13 +187,13 @@ mdl.update()
 obj_install = gp.quicksum(y[j] for j in J)
 obj_edges = gp.quicksum(w[(u, v)] * z[(u, v)] for (u, v) in E)
 
-mdl.setObjective(w * obj_install + obj_edges, GRB.MINIMIZE)
+mdl.setObjective(w_install * obj_install + obj_edges, GRB.MINIMIZE)
 
 # --------------------------------------------
 # Restrições
 # --------------------------------------------
 
-# (Cobertura)  sum_j a_ij y_j >= k,  ∀ i∈T
+# (k-cobertura)  sum_j a_ij y_j >= k,  ∀ i∈T
 # Aqui: a_ij = 1 se dist(target_i, fixed_j) <= R_comm
 if T:
     for i in T:
@@ -210,6 +211,18 @@ if T:
             # Nenhum candidato cobre este alvo;
             # se quiser forçar inviabilidade, poderia exigir >= k_cov mesmo assim.
             pass
+
+# (g-conectividade local):
+#   Para cada j ∈ J:
+#   grau(j) = sum_{i:(i,j)∈E} z_{ij} + sum_{i:(j,i)∈E} z_{ji} ≥ g_conn * y_j
+for j in J:
+    incident = gp.quicksum(
+        y[i] for i in J if i!=j and A[(i,j)] == 1
+    )
+    mdl.addConstr(
+        incident >= g_conn * y[j],
+        name=f"g_conn_{j[1]}"
+    )
 
 # (Link só pode ativar se extremos instalados)
 # z_uv <= y_u, z_uv <= y_v para (u,v) com u,v ∈ J
