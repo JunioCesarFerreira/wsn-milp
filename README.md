@@ -21,10 +21,11 @@ $$
 
 
 $$
-e_{ij}(t)=\begin{cases}
-d_{ij}^2(t),\quad & \text{if }0<d_{ij}(t)\le R_{\text{com}},\\
-(R_{\text{inter}}-d_{ij}(t))^2, & \text{if }R_{\text{com}}<d_{ij}(t)\le R_{\text{inter}},\\
-0, &\text{other cases}.
+e_{ij}(t) =
+\begin{cases}
+d_{ij}^2(t), & \text{if } 0 < d_{ij}(t) \le R_{\text{com}},\\[4pt]
+(R_{\text{inter}} - d_{ij}(t))^2, & \text{if } R_{\text{com}} < d_{ij}(t)\le R_{\text{inter}},\\[4pt]
+0, & \text{other cases}.
 \end{cases}
 $$
 
