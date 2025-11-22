@@ -75,7 +75,7 @@ def save_routes_gif(
     def _pos_node(n, t):
         if n[0] == "sink":
             return q_sink
-        if n[0] == "f":
+        if n[0] == "j":
             return q_fixed[n]
         if n[0] == "m":
             return r_mobile(n[1], t)
@@ -191,7 +191,7 @@ def save_routes2_gif(
     def _pos_node(n, t):
         if n[0] == "sink":
             return q_sink
-        if n[0] == "f":
+        if n[0] == "j":
             return q_fixed[n]
         if n[0] == "m":
             return r_mobile(n[1], t)
