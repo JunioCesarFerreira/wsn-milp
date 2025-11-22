@@ -20,8 +20,8 @@ $$
 $$
 e_{ij}(t) = 
     \begin{cases}
-        d_{ij}^2(t),\quad & \text{if }0<d_{ij}(t)\le R_{\text{com}},\\[0.25em]
-        (R_{\text{inter}}-d_{ij}(t))^2, & \text{if }R_{\text{com}}<d_{ij}(t)\le R_{\text{inter}},\\[0.25em]
+        d_{ij}^2(t),\quad & \text{if }0<d_{ij}(t)\le R_{\text{com}},\\
+        (R_{\text{inter}}-d_{ij}(t))^2, & \text{if }R_{\text{com}}<d_{ij}(t)\le R_{\text{inter}},\\
         0, &\text{other cases.}
     \end{cases}
 $$
@@ -42,29 +42,29 @@ $$
 \text{s.a.}\quad
 & z_{ij}(t)\le y_i,\quad z_{ij}(t)\le y_j,
 && \forall (i,j)\in\mathcal E_t\cap(\mathcal{J}\times\mathcal{J}),\ \forall t\in\mathcal T,
-\\[0.25em]
+\\
 & z_{sj}(t) \le y_j,\quad z_{js}(t) \le y_j, 
 && \forall j\in\mathcal{J}\ \text{com }(s,j),(j,s)\in\mathcal{E}_t,\ \forall t\in\mathcal T,
-\\[0.25em]
+\\
 & 0\le x_{ij}(t)\le C_{ij}(t)\,z_{ij}(t),
 && \forall (i,j)\in\mathcal E_t,\ \forall t\in\mathcal T,
-\\[0.25em]
+\\
 & \sum_{i:(m,i)\in \mathcal E_t} x_{mi}(t)
   - \sum_{i:(i,m)\in \mathcal E_t} x_{im}(t)
   = b_{m,t},
 && \forall m\in\mathcal M,\ \forall t\in\mathcal T,
-\\[0.25em]
+\\
 & \sum_{i:(j,i)\in \mathcal E_t} x_{ji}(t)
   - \sum_{i:(i,j)\in \mathcal E_t} x_{ij}(t)
   = 0,
 && \forall j\in\mathcal J,\ \forall t\in\mathcal T,
-\\[0.25em]
+\\
 & \sum_{i:(i,s)\in \mathcal E_t} x_{i s}(t)
   = \sum_{m\in\mathcal M} b_{m,t},
 && \forall t\in\mathcal T,
-\\[0.25em]
+\\
 & y_j\in\lbrace0,1\rbrace, && \forall j\in\mathcal J,
-\\[0.25em]
+\\
 & z_{ij}(t)\in\lbrace0,1\rbrace,\quad x_{ij}(t)\ge 0, && \forall (i,j)\in\mathcal{E}_t,\ \forall t\in\mathcal T.
 \end{aligned}
 $$
@@ -93,32 +93,32 @@ $$
   \text{s.a.}\quad
 & z_{ij} \le y_i,\quad z_{ij} \le y_j,
 && \forall (i,j)\in\mathcal{E}\cap(\mathcal{J}\times\mathcal{J}), 
-\\[0.25em]
+\\
 & z_{sj} \le y_j,\quad z_{js} \le y_j, 
 && \forall j\in\mathcal{J}\,|\, (s,j),(j,s)\in\mathcal{E},
-\\[0.25em]
+\\
 & 0 \le x_{ij} \le M_{\max}\,z_{ij},
 && \forall (i,j)\in\mathcal{E}, 
-\\[0.25em]
+\\
 & \sum_{i:(j,i)\in\mathcal{E}} x_{ji}
     - \sum_{i:(i,j)\in\mathcal{E}} x_{ij}
     = y_j,
 && \forall j\in\mathcal{J}, 
-\\[0.25em]
+\\
 & \sum_{i:(i,s)\in\mathcal{E}} x_{is}
     = \sum_{j\in\mathcal{J}} y_j,
 && \text{(sink node)}, 
-\\[0.25em]
+\\
 & \sum_{j\in\mathcal{J}} a_{hj}\,y_j \;\ge\; \mathbf{k},
 && \forall h\in\mathcal{H}, 
-\\[0.25em]
+\\
 & \sum_{i:(i,j)\in\mathcal{E}} A_{ij}\,y_i
     \;\ge\; \mathbf{g}\,y_j,
 && \forall j\in\mathcal{J}, 
-\\[0.25em]
+\\
 & y_j \in \lbrace0,1\rbrace,
 && \forall j\in\mathcal{J},
-\\[0.25em]
+\\
 & z_{ij} \in \lbrace0,1\rbrace,\quad x_{ij} \ge 0,
 && \forall (i,j)\in\mathcal{E}.
 \end{aligned}
