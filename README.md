@@ -6,6 +6,7 @@ $$
 d_{ij}(t)=||p_i(t)-p_j(t)||_2
 $$
 
+
 $$
 A_{ij}(t)=\begin{cases}
 1,\quad &d_{ij}(t)\le R_{\text{com}},\\
@@ -13,23 +14,28 @@ A_{ij}(t)=\begin{cases}
 \end{cases}
 $$
 
+
 $$
 C_{ij}(t)=\max\Big\lbrace 0, C_0\big(1-k_{decay}d_{ij}(t)\big)^2\Big\rbrace
 $$
+
 
 $$
 e_{ij}(t)=\begin{cases}
 d_{ij}^2(t),\quad & \text{if }0<d_{ij}(t)\le R_{\text{com}},\\
 (R_{\text{inter}}-d_{ij}(t))^2, & \text{if }R_{\text{com}}<d_{ij}(t)\le R_{\text{inter}},\\
-0, &\text{other cases.}
+0, &\text{other cases}.
 \end{cases}
 $$
+
 
 $$
 \mathcal{E}_t=\big\lbrace(i,j)\in \mathcal{V}\times \mathcal{V}\;|\;0<d_{ij}(t)\le R_{\text{com}},\ i\neq j\big\rbrace
 $$
 
+
 ## MILP
+
 $$
 \begin{aligned}
 \min_{y,z,x}\quad & w\sum_{j\in\mathcal J} y_j + \sum_{t\in\mathcal T}\sum_{(i,j)\in \mathcal E_t}e_{ij}(t) x_{ij}(t) \\
