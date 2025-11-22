@@ -44,13 +44,15 @@ region   = sim.get("region", [-200, -200, 200, 200])
 fixed_list  = sim["simulationElements"]["fixedMotes"]
 mobile_list = sim["simulationElements"]["mobileMotes"]
 
-# Parâmetros do modelo
-cap0 = 10
-kdecay = 0.1
-alpha_yx = 1000.0**2
+# ------------------------------
+# Parâmetros do modelo (modelo mobile)
+# ------------------------------
+C0      = 10.0     # capacidade máxima nominal (C_0)
+kdecay  = 0.1      # fator de atenuação (k_decay)
+w_install = 1000.0**2  # peso w da função objetivo para instalação de motes
 
 # Dicionário de motes
-sink_name = None # sink
+sink_name = None  # nome do sink
 for fm in fixed_list:
     if fm.get("name", "").lower() == "root":
         sink_name = fm["name"]
@@ -75,7 +77,7 @@ for fm in fixed_list:
 if p_sink is None:
     raise ValueError("Não foi possível determinar a posição do sink.")
 
-# móveis e trajetórias discretas
+# Móveis e trajetórias discretas
 mob_names = [m["name"] for m in mobile_list]
 r_mobile_by_name = {}
 for m in mobile_list:
@@ -90,16 +92,17 @@ for m in mobile_list:
 def r_mobile(name: str, tau: int):
     return r_mobile_by_name[name](tau)
 
-def pos_node(n, t):
+def pos_node(n, t: int):
+    """Posição espacial p_i(t) do nó i no instante t, conforme o modelo mobile."""
     if n[0] == "sink":
         return p_sink
-    if n[0] == "j":
+    if n[0] == "j":   # candidato fixo
         return p_cand[n]
-    if n[0] == "m":
+    if n[0] == "m":   # móvel
         return r_mobile(n[1], t)
-    raise ValueError("nó desconhecido")
+    raise ValueError(f"Nó desconhecido: {n}")
 
-# demanda: cada móvel gera 1.0 unidade por tempo
+# Demanda: cada móvel gera 1.0 unidade por tempo (b_{m,t} = 1)
 b = {(name, t): 1.0 for name in mob_names for t in range(1, T + 1)}
 
 # ==============================
@@ -109,31 +112,39 @@ b = {(name, t): 1.0 for name in mob_names for t in range(1, T + 1)}
 mdl = gp.Model("WSN_Mobile_Coverage_Problem")
 mdl.Params.OutputFlag = 1  # 0 para silenciar logs
 
-def link_possible(pi, pj):
-    return np.linalg.norm(pi - pj) <= R_comm
-
-def capacity(pi, pj):
+# --------------------------------------------
+# Funções auxiliares: capacidade C_ij(t) e energia e_ij(t)
+# --------------------------------------------
+def capacity(pi: np.ndarray, pj: np.ndarray) -> float:
+    """C_{ij}(t) = max{0, C0 * (1 - kdecay * d)^2} conforme o modelo mobile."""
     d = np.linalg.norm(pi - pj)
-    return max(0.0, cap0 * (1 - kdecay * d) ** 2)
+    return max(0.0, C0 * (1.0 - kdecay * d) ** 2)
 
-def link_cost(pi, pj):
-    N = 2
-    delta = 0.5
-    d = np.linalg.norm(pi - pj)    
-    noise = np.random.uniform(-delta, delta)
-    if 0 < d <= R_comm:
-        return d**N + noise
+def energy_cost(pi: np.ndarray, pj: np.ndarray) -> float:
+    """
+    e_{ij}(t) conforme o modelo:
+        d^2,                       se 0 < d <= R_comm
+        (R_interf - d)^2,          se R_comm < d <= R_interf
+        0,                         caso contrário.
+    No modelo mobile, (i,j) ∈ E_t implica d <= R_comm, então na prática
+    entra sempre o primeiro ramo, mas mantemos a forma geral.
+    """
+    d = np.linalg.norm(pi - pj)
+    if 0.0 < d <= R_comm:
+        return d ** 2
     elif R_comm < d <= R_interf:
-        return (R_interf - d)**N + noise
+        return (R_interf - d) ** 2
     else:
-        return 0
+        return 0.0
 
-E_t = {}
-A = {}
-C = {}
-cost = {}
+# --------------------------------------------
+# Construção de E_t, C_{ij}(t), e_{ij}(t)
+# --------------------------------------------
+E_t = {}          # t -> lista de arestas (i,j)
+C = {}            # (i,j,t) -> capacidade
+e_cost = {}       # (i,j,t) -> e_{ij}(t)
 
-for t in range(1, T+1):
+for t in range(1, T + 1):
     nodes_t = [sink] + J + [("m", name) for name in mob_names]
     E_t[t] = []
     for i in nodes_t:
@@ -141,14 +152,14 @@ for t in range(1, T+1):
             if i == j:
                 continue
             pi, pj = pos_node(i, t), pos_node(j, t)
-            feas = link_possible(pi, pj)
-            A[(i, j, t)] = 1 if feas else 0
-            if feas:
+            d = np.linalg.norm(pi - pj)
+            # Definição de E_t pelo raio de comunicação (0 < d <= R_comm)
+            if 0.0 < d <= R_comm:
                 cap = capacity(pi, pj)
-                if cap > 0:
+                if cap > 0.0:
                     E_t[t].append((i, j))
                     C[(i, j, t)] = cap
-                    cost[(i, j, t)] = link_cost(pi, pj)
+                    e_cost[(i, j, t)] = energy_cost(pi, pj)
 
 # --------------------------------------------
 # Variáveis
@@ -168,27 +179,31 @@ for t in range(1, T + 1):
 mdl.update()
 
 # --------------------------------------------
-# Objetivo (Modelo 2)
-#   min  alpha_yx * sum_j (alpha_{inter} * k_j + 1) * y_j  +  sum_t sum_(i,j) dtilde_ij(t) * x_ij(t)
+# Objetivo (modelo mobile)
+#   min  w * sum_j y_j  +  sum_t sum_(i,j) e_ij(t) * x_ij(t)
 # --------------------------------------------
-obj_install = gp.quicksum((y[j] + alpha_yx * y[j]) for j in J)
+obj_install = w_install * gp.quicksum(y[j] for j in J)
 obj_flow = gp.quicksum(
-    cost[(i, j, t)] * xvar[(i, j, t)]
+    e_cost[(i, j, t)] * xvar[(i, j, t)]
     for t in range(1, T + 1)
     for (i, j) in E_t[t]
 )
 mdl.setObjective(obj_install + obj_flow, GRB.MINIMIZE)
 
 # --------------------------------------------
-# Restrições
+# Restrições (modelo mobile)
 # --------------------------------------------
 
-# (1) Existência / viabilidade do link: z_ij(t) ≤ A_ij(t)
+# (1) Capacidade: 0 ≤ x_ij(t) ≤ C_ij(t) * z_ij(t)
 for t in range(1, T + 1):
     for (i, j) in E_t[t]:
-        mdl.addConstr(z[(i, j, t)] <= A[(i, j, t)], name=f"exist_{i}_{j}_t{t}")
+        mdl.addConstr(
+            xvar[(i, j, t)] <= C[(i, j, t)] * z[(i, j, t)],
+            name=f"cap_{i}_{j}_t{t}"
+        )
 
-# (2) Instalação em fixos nas extremidades: z_ij(t) ≤ y_i e z_ij(t) ≤ y_j quando i ou j ∈ J
+# (2) Instalação em fixos nas extremidades:
+#     z_ij(t) ≤ y_i e z_ij(t) ≤ y_j quando i ou j ∈ J
 #     (apenas quando a ponta é fixa; não há y para sink ou móveis)
 for t in range(1, T + 1):
     for (i, j) in E_t[t]:
@@ -197,39 +212,46 @@ for t in range(1, T + 1):
         if j[0] == "j":  # j é um candidato fixo
             mdl.addConstr(z[(i, j, t)] <= y[j], name=f"inst_j_{i}_{j}_t{t}")
 
-# (3) Capacidade: 0 ≤ x_ij(t) ≤ C_ij(t) * z_ij(t)
-for t in range(1, T + 1):
-    for (i, j) in E_t[t]:
-        mdl.addConstr(
-            xvar[(i, j, t)] <= C[(i, j, t)] * z[(i, j, t)],
-            name=f"cap_{i}_{j}_t{t}"
-        )
-
-# (4) Conservação de fluxo nos móveis: sum_out - sum_in = b_{m,t}
+# (3) Conservação de fluxo nos móveis: sum_out - sum_in = b_{m,t}
 for t in range(1, T + 1):
     for name in mob_names:
         m_node = ("m", name)
-        outflow = gp.quicksum(xvar[(m_node, j, t)] for (ii, j) in E_t[t] if ii == m_node)
-        inflow  = gp.quicksum(xvar[(i, m_node, t)] for (i, jj) in E_t[t] if jj == m_node)
-        mdl.addConstr(outflow - inflow == b[(name, t)], name=f"flow_mobile_{name}_t{t}")
+        outflow = gp.quicksum(
+            xvar[(m_node, j, t)] for (ii, j) in E_t[t] if ii == m_node
+        )
+        inflow = gp.quicksum(
+            xvar[(i, m_node, t)] for (i, jj) in E_t[t] if jj == m_node
+        )
+        mdl.addConstr(outflow - inflow == b[(name, t)],
+                      name=f"flow_mobile_{name}_t{t}")
 
-# (5) Conservação de fluxo nos fixos: sum_out - sum_in = 0
+# (4) Conservação de fluxo nos fixos: sum_out - sum_in = 0
 for t in range(1, T + 1):
-    for i in J:
-        outflow = gp.quicksum(xvar[(i, j, t)] for (ii, j) in E_t[t] if ii == i)
-        inflow  = gp.quicksum(xvar[(j, i, t)] for (j, jj) in E_t[t] if jj == i)
-        mdl.addConstr(outflow - inflow == 0.0, name=f"flow_fixed_{i}_t{t}")
+    for j_node in J:
+        outflow = gp.quicksum(
+            xvar[(j_node, v, t)] for (u, v) in E_t[t] if u == j_node
+        )
+        inflow = gp.quicksum(
+            xvar[(u, j_node, t)] for (u, v) in E_t[t] if v == j_node
+        )
+        mdl.addConstr(outflow - inflow == 0.0,
+                      name=f"flow_fixed_{j_node}_t{t}")
 
-# (6) Balanço no sink s: sum_in = sum_m b_{m,t}
+# (5) Balanço no sink s: sum_in = sum_m b_{m,t}
 for t in range(1, T + 1):
-    inflow_s  = gp.quicksum(xvar[(i, sink, t)] for (i, j) in E_t[t] if j == sink)
-    total_bt  = gp.quicksum(b[(name, t)] for name in mob_names)
+    inflow_s = gp.quicksum(
+        xvar[(i, sink, t)] for (i, j) in E_t[t] if j == sink
+    )
+    total_bt = gp.quicksum(b[(name, t)] for name in mob_names)
     mdl.addConstr(inflow_s == total_bt, name=f"flow_sink_t{t}")
 
-# plot candidatos
+# --------------------------------------------
+# Plots de candidatos
+# --------------------------------------------
 plot_candidates_and_paths(
     F=J, q_fixed=p_cand, q_sink=p_sink, R_comm=R_comm,
-    mob_names=mob_names, r_mobile=r_mobile, T=T, region=region, out_path=RESULTS_PATH / "pic_candidates.jpg"
+    mob_names=mob_names, r_mobile=r_mobile, T=T, region=region,
+    out_path=RESULTS_PATH / "pic_candidates.jpg"
 )
 
 # Resolver
@@ -253,45 +275,52 @@ if status not in (GRB.OPTIMAL, GRB.SUBOPTIMAL):
 # valores
 y_val = {j: y[j].X for j in J}
 installed = [j for j, v in y_val.items() if v > 0.5]
-x_val = {(i, j, t): xvar[(i, j, t)].X for t in range(1, T + 1) for (i, j) in E_t[t]}
-z_val = {(i, j, t): z[(i, j, t)].X for t in range(1, T + 1) for (i, j) in E_t[t]}
+x_val = {(i, j, t): xvar[(i, j, t)].X
+         for t in range(1, T + 1) for (i, j) in E_t[t]}
+z_val = {(i, j, t): z[(i, j, t)].X
+         for t in range(1, T + 1) for (i, j) in E_t[t]}
 
-fixed_motes_out = []                 
+fixed_motes_out = []
 fixed_motes_out.append({
-    "position": [0.0, 0.0],
+    "position": [float(p_sink[0]), float(p_sink[1])],
     "name": "root",
     "sourceCode": "node.c"
 })
 count = 1
-for j in installed:
-    pos = p_cand[j]                 
-    name = j[1]                     
+for j_node in installed:
+    pos = p_cand[j_node]
     fixed_motes_out.append({
         "position": [float(pos[0]), float(pos[1])],
         "name": f"node{count}",
         "sourceCode": "node.c"
     })
-    count+=1
+    count += 1
 
 sim["simulationElements"]["fixedMotes"] = fixed_motes_out
 
+RESULTS_PATH.mkdir(parents=True, exist_ok=True)
 with open(RESULTS_PATH / "output.json", "w", encoding="utf-8") as f:
     json.dump(sim, f, ensure_ascii=False, indent=4)
-    
+
 plot_solution(
-    F=J, installed=installed, q_fixed=p_cand, q_sink=p_sink, R_comm=R_comm, R_inter=R_interf,
-    mob_names=mob_names, T=T, r_mobile=r_mobile, 
+    F=J, installed=installed, q_fixed=p_cand, q_sink=p_sink,
+    R_comm=R_comm, R_inter=R_interf,
+    mob_names=mob_names, T=T, r_mobile=r_mobile,
     region=region, out_path=RESULTS_PATH / "pic_installed.png"
 )
 
 plot_installed_graph(
     installed=installed, q_fixed=p_cand, q_sink=p_sink, R_comm=R_comm,
-    region=region, out_path=RESULTS_PATH /"pic_installed_graph.png"
+    region=region, out_path=RESULTS_PATH / "pic_installed_graph.png"
 )
 
-save_routes_gif(installed, r_mobile, mob_names, p_sink, p_cand, R_comm, 
-                region, x_val, E_t, T, J, out_dir_path=RESULTS_PATH)
-save_routes2_gif(installed, r_mobile, mob_names, p_sink, p_cand, R_comm, 
-                 region, x_val, E_t, T, J, out_dir_path=RESULTS_PATH)
+save_routes_gif(
+    installed, r_mobile, mob_names, p_sink, p_cand, R_comm,
+    region, x_val, E_t, T, J, out_dir_path=RESULTS_PATH
+)
+save_routes2_gif(
+    installed, r_mobile, mob_names, p_sink, p_cand, R_comm,
+    region, x_val, E_t, T, J, out_dir_path=RESULTS_PATH
+)
 
 print("Done.")
