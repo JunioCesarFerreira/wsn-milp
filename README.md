@@ -3,7 +3,7 @@
 ## Preprocessing
 
 $$
-d_{ij}(t)=\|p_i(t)-p_j(t)\|_2
+d_{ij}(t)=||p_i(t)-p_j(t)||_2
 $$
 
 $$
@@ -14,7 +14,7 @@ A_{ij}(t)=\begin{cases}
 $$
 
 $$
-C_{ij}(t)=\max\Big\{0, C_0\big(1-k_{decay}d_{ij}(t)\big)^2\Big\}
+C_{ij}(t)=\max\Big\lbrace 0, C_0\big(1-k_{decay}d_{ij}(t)\big)^2\Big\rbrace
 $$
 
 $$
@@ -27,7 +27,7 @@ e_{ij}(t) =
 $$
 
 $$
-\mathcal{E}_t=\big\{(i,j)\in \mathcal{V}\times \mathcal{V}\;|\;0<d_{ij}(t)\le R_{\text{com}},\ i\neq j\big\}
+\mathcal{E}_t=\big\lbrace(i,j)\in \mathcal{V}\times \mathcal{V}\;|\;0<d_{ij}(t)\le R_{\text{com}},\ i\neq j\big\rbrace
 $$
 
 ## MILP
@@ -63,9 +63,9 @@ $$
   = \sum_{m\in\mathcal M} b_{m,t},
 && \forall t\in\mathcal T,
 \\[0.25em]
-& y_j\in\{0,1\}, && \forall j\in\mathcal J,
+& y_j\in\lbrace0,1\rbrace, && \forall j\in\mathcal J,
 \\[0.25em]
-& z_{ij}(t)\in\{0,1\},\quad x_{ij}(t)\ge 0, && \forall (i,j)\in\mathcal{E}_t,\ \forall t\in\mathcal T.
+& z_{ij}(t)\in\lbrace0,1\rbrace,\quad x_{ij}(t)\ge 0, && \forall (i,j)\in\mathcal{E}_t,\ \forall t\in\mathcal T.
 \end{aligned}
 $$
 
@@ -116,10 +116,10 @@ $$
     \;\ge\; \mathbf{g}\,y_j,
 && \forall j\in\mathcal{J}, 
 \\[0.25em]
-& y_j \in \{0,1\},
+& y_j \in \lbrace0,1\rbrace,
 && \forall j\in\mathcal{J},
 \\[0.25em]
-& z_{ij} \in \{0,1\},\quad x_{ij} \ge 0,
+& z_{ij} \in \lbrace0,1\rbrace,\quad x_{ij} \ge 0,
 && \forall (i,j)\in\mathcal{E}.
 \end{aligned}
 $$
