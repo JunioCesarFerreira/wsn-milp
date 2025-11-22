@@ -233,6 +233,29 @@ $$
 
 ---
 
+$$
+\begin{aligned}
+  \min_{y,z}\quad
+  & w \sum_{j\in\mathcal{J}} y_j
+    + \sum_{(i,j)\in\mathcal{E}} e_{ij}\,z_{ij} \\[0.4em]
+  \text{s.a.}\quad
+  & z_{ij} \le y_i,\quad
+    z_{ij} \le y_j,
+    && \forall (i,j)\in\mathcal{E}, \\
+  & \sum_{j\in\mathcal{J}} a_{hj}\,y_j \;\ge\; \mathbf{k},
+    && \forall h\in\mathcal{H}, \\
+  & \sum_{i:(i,j)\in\mathcal{E}} A_{ij}\,y_i
+    \;\ge\; \mathbf{g}\,y_j,
+    && \forall j\in\mathcal{J}\cup\{s\}, \\
+  & y_j \in \{0,1\},
+    && \forall j\in\mathcal{J},\\
+  & z_{ij} \in \{0,1\},
+    && \forall (i,j)\in\mathcal{E},
+\end{aligned}
+$$
+
+---
+
 ## Tarefa PDDL
 
 - Incluir variações de caminhos disparados por eventos.
