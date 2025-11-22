@@ -39,15 +39,16 @@ R_comm   = float(sim.get("radiusOfReach", 100.0))
 R_interf = float(sim.get("radiusOfInter", 200.0))
 region   = sim.get("region", [-200, -200, 200, 200])
 
+# raio de cobertura (R_cov). Se não existir no JSON, usa R_comm como fallback.
+R_cov = float(sim.get("radiusOfCov", R_comm))
+
 fixed_list  = sim["simulationElements"]["fixedMotes"]
 
-# parâmetros do modelo
-cap0 = 10.0
-kdecay = 0.1
-
-w_install = float(sim.get("w_install", 1e6))  # peso da instalação no objetivo
-k_cov = int(sim.get("k_coverage", 2))         # nível de cobertura k
-g_conn = int(sim.get("g_connectivity", 1))    # nível de conectividade g
+# parâmetros do modelo (modelo target)
+w_install = float(sim.get("w_install", 1e6))    # peso w da instalação no objetivo
+k_cov     = int(sim.get("k_coverage", 2))       # nível de cobertura k
+g_conn    = int(sim.get("g_connectivity", 1))   # nível de conectividade g
+M_max     = float(sim.get("M_max", 1e4))        # big-M global para as capacidades de fluxo
 
 # ------------------------------
 # sink e nós fixos candidatos
@@ -79,7 +80,7 @@ if q_sink is None:
     raise ValueError("Não foi possível determinar a posição do sink.")
 
 def pos_node(n):
-    """Retorna a posição (x,y) do nó n."""
+    """Retorna a posição (x,y) do nó n, conforme o modelo target."""
     if n[0] == "sink":
         return q_sink
     if n[0] == "f":
@@ -87,78 +88,73 @@ def pos_node(n):
     raise ValueError(f"nó desconhecido: {n}")
 
 # ==============================
-# Conjunto de alvos (T) para cobertura
+# Conjunto de alvos (H) para cobertura
 # ==============================
 targets_raw = sim.get("targets", [])  # opcional; adapte ao seu JSON
-T = []           # índices dos alvos
-q_target = {}    # i -> np.array([x,y])
+H = []           # índices dos alvos
+q_target = {}    # h -> np.array([x,y])
 
 for idx, tgt in enumerate(targets_raw):
     pos = np.array(tgt["position"], dtype=float)
-    T.append(idx)
+    H.append(idx)
     q_target[idx] = pos
-
-print(q_target)
 
 # ==============================
 # Funções auxiliares
 # ==============================
 
-def link_possible(pi, pj):
-    return np.linalg.norm(pi - pj) <= R_comm
+def energy_cost(pi: np.ndarray, pj: np.ndarray) -> float:
+    """
+    e_{ij} como no modelo:
+        d^2,                    se 0 < d <= R_comm
+        (R_interf - d)^2,       se R_comm < d <= R_interf
+        0,                      caso contrário.
 
-def capacity(pi, pj):
+    Como só criamos arestas com d <= R_comm, entra sempre o primeiro caso,
+    mas mantemos a forma geral para coerência com o texto.
+    """
     d = np.linalg.norm(pi - pj)
-    return max(0.0, cap0 * (1 - kdecay * d) ** 2)
-
-def link_cost(pi, pj):
-    """w_uv no modelo."""
-    N = 2
-    delta = 0.5
-    d = np.linalg.norm(pi - pj)
-    noise = np.random.uniform(-delta, delta)
-    if 0 < d <= R_comm:
-        return d**N + noise
+    if 0.0 < d <= R_comm:
+        return d ** 2
     elif R_comm < d <= R_interf:
-        return (R_interf - d)**N + noise
+        return (R_interf - d) ** 2
     else:
         return 0.0
 
 # ==============================
 # Pré-processamento de arestas
 # ==============================
-A = {}
-C = {}
-w = {}
-nodes_t = [sink] + J
-E = []
+A = {}      # matriz de adjacência geométrica A_{ij}
+e_cost = {} # e_{ij}
+E = []      # conjunto de arestas viáveis (i,j)
 
-for i in nodes_t:
-    for j in nodes_t:
+nodes = [sink] + J
+
+for i in nodes:
+    for j in nodes:
         if i == j:
             continue
         pi, pj = pos_node(i), pos_node(j)
-        feas = link_possible(pi, pj)
-        A[(i, j)] = 1 if feas else 0
-        if feas:
-            cap = capacity(pi, pj)
-            if cap > 0:
-                E.append((i, j))
-                C[(i, j)] = cap   # big-M específico da aresta
-                w[(i, j)] = link_cost(pi, pj)
+        d = np.linalg.norm(pi - pj)
+        if 0.0 < d <= R_comm:
+            # aresta viável
+            A[(i, j)] = 1
+            E.append((i, j))
+            e_cost[(i, j)] = energy_cost(pi, pj)
+        else:
+            A[(i, j)] = 0
 
 # ==============================
-# Modelo Gurobi
+# Modelo Gurobi (modelo target)
 # ==============================
 mdl = gp.Model("WSN_Target_Coverage_Problem")
-
 mdl.Params.OutputFlag = 1  # 0 para silenciar logs
 
 # --------------------------------------------
 # Variáveis
 #  - y_j: instalação de fixos (j ∈ J)
-#  - z_uv: ativação da aresta (u,v)
-#  - x_uv: fluxo na aresta (u,v)
+#  - z_ij: ativação da aresta (i,j)
+#  - x_ij: fluxo na aresta (i,j)
 # --------------------------------------------
 y = {
     j: mdl.addVar(vtype=GRB.BINARY, name=f"y_{j[0]}_{j[1]}")
@@ -181,11 +177,11 @@ for (u, v) in E:
 mdl.update()
 
 # --------------------------------------------
-# Objetivo
-#   α * sum_j y_j  +  sum_(u,v) w_uv z_uv
+# Objetivo (modelo target)
+#   min  w * sum_j y_j  +  sum_(i,j) e_ij z_ij
 # --------------------------------------------
 obj_install = gp.quicksum(y[j] for j in J)
-obj_edges = gp.quicksum(w[(u, v)] * z[(u, v)] for (u, v) in E)
+obj_edges   = gp.quicksum(e_cost[(u, v)] * z[(u, v)] for (u, v) in E)
 
 mdl.setObjective(w_install * obj_install + obj_edges, GRB.MINIMIZE)
 
@@ -193,31 +189,29 @@ mdl.setObjective(w_install * obj_install + obj_edges, GRB.MINIMIZE)
 # Restrições
 # --------------------------------------------
 
-# (k-cobertura)  sum_j a_ij y_j >= k,  ∀ i∈T
-# Aqui: a_ij = 1 se dist(target_i, fixed_j) <= R_comm
-if T:
-    for i in T:
-        pos_i = q_target[i]
+# (k-cobertura)  sum_j a_hj y_j >= k,  ∀ h∈H
+# com a_hj = 1 se dist(target_h, fixed_j) <= R_cov
+if H:
+    for h in H:
+        pos_h = q_target[h]
         covering_sensors = [
             j for j in J
-            if np.linalg.norm(pos_i - q_fixed[j]) <= R_comm
+            if np.linalg.norm(pos_h - q_fixed[j]) <= R_cov
         ]
         if covering_sensors:
             mdl.addConstr(
                 gp.quicksum(y[j] for j in covering_sensors) >= k_cov,
-                name=f"cov_target_{i}"
+                name=f"cov_target_{h}"
             )
         else:
-            # Nenhum candidato cobre este alvo;
-            # se quiser forçar inviabilidade, poderia exigir >= k_cov mesmo assim.
+            # Nenhum candidato cobre este alvo; se quiser, pode forçar inviabilidade.
             pass
 
 # (g-conectividade local):
-#   Para cada j ∈ J:
-#   grau(j) = sum_{i:(i,j)∈E} z_{ij} + sum_{i:(j,i)∈E} z_{ji} ≥ g_conn * y_j
+#   ∑_{i:(i,j)∈E} A_ij y_i ≥ g * y_j,  ∀ j∈J
 for j in J:
     incident = gp.quicksum(
-        y[i] for i in J if i!=j and A[(i,j)] == 1
+        y[i] for i in J if i != j and A.get((i, j), 0) == 1
     )
     mdl.addConstr(
         incident >= g_conn * y[j],
@@ -225,7 +219,7 @@ for j in J:
     )
 
 # (Link só pode ativar se extremos instalados)
-# z_uv <= y_u, z_uv <= y_v para (u,v) com u,v ∈ J
+# z_ij <= y_i, z_ij <= y_j para (i,j) com i,j ∈ J
 # z_sj <= y_j, z_js <= y_j para arestas que envolvem o sink
 for (u, v) in E:
     # ponta u
@@ -241,16 +235,16 @@ for (u, v) in E:
             name=f"z_le_y_v_{u[1]}__{v[1]}"
         )
 
-# (Capacidade) 0 <= x_uv <= M_uv * z_uv
+# (Capacidade de fluxo - big-M global)
+# 0 <= x_ij <= M_max * z_ij,  ∀ (i,j)∈E
 for (u, v) in E:
-    M_uv = C[(u, v)]
     mdl.addConstr(
-        xvar[(u, v)] <= M_uv * z[(u, v)],
+        xvar[(u, v)] <= M_max * z[(u, v)],
         name=f"cap_{u[1]}__{v[1]}"
     )
 
 # (Conservação de fluxo nos fixos):
-#   sum_{v:(j,v)∈E} x_jv - sum_{u:(u,j)∈E} x_uj = y_j , ∀ j∈J
+#   ∑_{v:(j,v)∈E} x_jv - ∑_{u:(u,j)∈E} x_uj = y_j , ∀ j∈J
 for j in J:
     outflow = gp.quicksum(
         xvar[(j, v)] for (u, v) in E if u == j
@@ -264,7 +258,7 @@ for j in J:
     )
 
 # (Nó sink):
-#   sum_{u:(u,s)∈E} x_us = sum_{j∈J} y_j
+#   ∑_{u:(u,s)∈E} x_us = ∑_{j∈J} y_j
 inflow_sink = gp.quicksum(
     xvar[(u, sink)] for (u, v) in E if v == sink
 )
@@ -289,8 +283,9 @@ mdl.addConstr(
 # ==============================
 plot_candidates_and_paths(
     F=J, q_fixed=q_fixed, q_sink=q_sink, R_comm=R_comm,
-    mob_names=[], r_mobile=[], T=[0],
-    region=region, out_path=RESULTS_PATH / "pic_candidates.jpg"
+    mob_names=[], r_mobile=None, T=0,
+    region=region, out_path=RESULTS_PATH / "pic_candidates.jpg",
+    targets=H, q_target=q_target, R_cov=R_cov,
 )
 
 # Resolver
@@ -342,14 +337,17 @@ with open(RESULTS_PATH / "output.json", "w", encoding="utf-8") as f:
     json.dump(sim, f, ensure_ascii=False, indent=4)
 
 plot_solution(
-    F=J, installed=installed, q_fixed=q_fixed, q_sink=q_sink, R_comm=R_comm, R_inter=R_interf,
-    mob_names=[], T=[0], r_mobile=[],
-    region=region, out_path=RESULTS_PATH / "pic_installed.png"
+    F=J, installed=installed, q_fixed=q_fixed, q_sink=q_sink,
+    R_comm=R_comm, R_inter=R_interf,
+    mob_names=[], T=0, r_mobile=None,
+    region=region, out_path=RESULTS_PATH / "pic_installed.png",
+    targets=H, q_target=q_target, R_cov=R_cov,
 )
 
 plot_installed_graph(
     installed=installed, q_fixed=q_fixed, q_sink=q_sink, R_comm=R_comm,
-    region=region, out_path=RESULTS_PATH / "pic_installed_graph.png"
+    region=region, out_path=RESULTS_PATH / "pic_installed_graph.png",
+    targets=H, q_target=q_target,
 )
 
 print("Done.")
