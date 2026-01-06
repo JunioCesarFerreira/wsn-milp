@@ -1,58 +1,66 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle
+from typing import Callable
 
 # ======================
-# Helper: trajetórias com quebras
+# Helper: trajectories with breaks
 # ======================
 
-def _traj_with_breaks(r_mobile, name, T, close=False, jump_factor=5.0):
+def _traj_with_breaks(
+    r_mobile: Callable[[str, int], tuple[float, float]],
+    name: str,
+    T: int,
+    close: bool = False,
+    jump_factor: float = 5.0,
+) -> np.array:
     """
-    Gera uma trajetória shape (N,2) com linhas 'quebradas' (NaNs) em saltos grandes.
-    - close=False por padrão: não faz o wrap (evita risco entre último e primeiro).
-    - jump_factor controla a sensibilidade: quebra quando passo > jump_factor * mediana.
+    Generates a trajectory of shape (N, 2) with 'broken' lines (NaNs) at large jumps.
+
+    - close=False by default: does not wrap the path (avoids risk between last and first points).
+    - jump_factor controls sensitivity: a break is inserted when step > jump_factor * median step.
     """
     pts = np.array([r_mobile(name, t) for t in range(1, T + 1)], dtype=float)
 
-    # Opcionalmente fechar (em geral, NÃO faça para caminhos abertos)
+    # Optionally close the trajectory (generally NOT recommended for open paths)
     if close:
         pts = np.vstack([pts, pts[0]])
 
-    # Distâncias entre pontos consecutivos
+    # Distances between consecutive points
     if len(pts) >= 2:
         diffs = np.diff(pts, axis=0)
         dists = np.linalg.norm(diffs, axis=1)
         med = np.median(dists) if np.any(dists > 0) else 0.0
-        thr = max(1e-9, med * jump_factor)  # limiar robusto
+        thr = max(1e-9, med * jump_factor)  # robust threshold
 
-        # Monta com NaNs onde houver salto
+        # Build trajectory inserting NaNs where jumps occur
         rows = [pts[0]]
         for k in range(1, len(pts)):
             if dists[k - 1] > thr:
-                rows.append([np.nan, np.nan])  # quebra a linha aqui
+                rows.append([np.nan, np.nan])  # break the line here
             rows.append(pts[k])
         pts = np.array(rows, dtype=float)
     return pts
 
 # ======================
-# Paleta / tamanhos (padrão visual)
+# Palette / sizes (visual defaults)
 # ======================
 
 COLOR_SINK      = "blue"
 COLOR_CANDIDATE = "black"
-COLOR_FIXED0    = "gray"    # não instalado
-COLOR_FIXED1    = "red"     # instalado
+COLOR_FIXED0    = "gray"    # not installed
+COLOR_FIXED1    = "red"     # installed
 COLOR_MOBILE    = "green"
 COLOR_TARGET    = "magenta"
 
 S_SINK      = 260
 S_FIXED0    = 40
 S_FIXED1    = 120
-S_MOBILE    = 18   # pontos da trajetória
-S_TARGET    = 60   # tamanho dos alvos
+S_MOBILE    = 18   # trajectory points
+S_TARGET    = 60   # target size
 
 # ================
-# FIGURA 1
+# FIGURE 1
 # ================
 
 def plot_candidates_and_paths(
@@ -70,16 +78,16 @@ def plot_candidates_and_paths(
     R_cov=None,
 ):
     """
-    Plota:
-      - candidatos (F)
+    Plots:
+      - candidate positions (F)
       - sink
-      - trajetórias móveis (se houver)
-      - (opcional) alvos e seus raios de cobertura
+      - mobile trajectories (if any)
+      - (optional) targets and their coverage radii
     """
     plt.figure(figsize=(10, 7))
     ax = plt.gca()
 
-    # candidatos + raios de comunicação
+    # Candidates + communication radii
     for j in F:
         q = q_fixed[j]
         ax.add_patch(
@@ -94,7 +102,7 @@ def plot_candidates_and_paths(
         )
         ax.scatter([q[0]], [q[1]], marker="s", s=S_FIXED0, c=COLOR_CANDIDATE)
 
-    # sink + raio de comunicação
+    # Sink + communication radius
     ax.scatter(
         [q_sink[0]],
         [q_sink[1]],
@@ -115,11 +123,11 @@ def plot_candidates_and_paths(
         )
     )
 
-    # (opcional) alvos + raios de cobertura
+    # (Optional) targets + coverage radii
     if targets is not None and q_target is not None and len(targets) > 0:
         for h in targets:
             p = q_target[h]
-            # ponto do alvo
+            # target point
             ax.scatter(
                 [p[0]],
                 [p[1]],
@@ -130,10 +138,10 @@ def plot_candidates_and_paths(
                 label=None,
             )
 
-        # um único label para "target" na legenda
-        ax.scatter([], [], marker="^", s=S_TARGET, c=COLOR_TARGET, label="alvo")
+        # Single legend entry for targets
+        ax.scatter([], [], marker="^", s=S_TARGET, c=COLOR_TARGET, label="target")
 
-    # trajetórias (NÃO fecha; quebra saltos com NaN)
+    # Trajectories (do NOT close; break large jumps with NaNs)
     for name in mob_names:
         traj = _traj_with_breaks(
             r_mobile, name, T, close=False, jump_factor=5.0
@@ -157,7 +165,7 @@ def plot_candidates_and_paths(
             label=None,
         )
 
-    ax.set_title("Candidatos, sink, trajetórias e alvos")
+    ax.set_title("Candidates, sink, trajectories and targets")
     ax.axis("equal")
     ax.grid(True)
     ax.legend(loc="best")
@@ -169,39 +177,39 @@ def plot_candidates_and_paths(
     plt.close()
 
 # ================
-# FIGURA 2
+# FIGURE 2
 # ================
 
 def plot_solution(
-    F,
-    installed,
-    q_fixed,
-    q_sink,
-    R_comm,
-    R_inter,
-    mob_names,
-    T,
-    r_mobile,
-    region,
-    out_path="./pic2.png",
-    targets=None,
-    q_target=None,
-    R_cov=None,
-):
+    F: list[int],
+    installed: list[int],
+    q_fixed: dict[int, tuple[float, float]],
+    q_sink: tuple[float, float],
+    R_comm: float,
+    R_inter: float,
+    mob_names: list[str],
+    T: int,
+    r_mobile: Callable[[str, int], tuple[float, float]],
+    region: list[float],
+    out_path: str = "./pic2.png",
+    targets: list[int] | None = None,
+    q_target: dict[int, tuple[float, float]] | None = None,
+    R_cov: float | None = None,
+) -> None:
     """
-    Plota:
-      - candidatos não instalados
-      - candidatos instalados (com R_comm e R_inter)
-      - sink (com raios)
-      - trajetórias móveis (se houver)
-      - (opcional) alvos com raios de cobertura
+    Plots:
+      - non-installed candidates
+      - installed candidates (with R_comm and R_inter)
+      - sink (with radii)
+      - mobile trajectories (if any)
+      - (optional) targets with coverage radii
     """
     plt.figure(figsize=(10, 7))
     ax = plt.gca()
 
     installed_set = set(installed)
 
-    # candidatos não instalados
+    # Non-installed candidates
     for j in F:
         if j not in installed_set:
             q = q_fixed[j]
@@ -214,7 +222,7 @@ def plot_solution(
                 alpha=0.9,
             )
 
-    # instalados
+    # Installed candidates
     for j in installed:
         q = q_fixed[j]
         ax.scatter(
@@ -280,7 +288,7 @@ def plot_solution(
         )
     )
 
-    # (opcional) alvos + raios de cobertura
+    # (Optional) targets + covered radius
     if targets is not None and q_target is not None and len(targets) > 0:
         for h in targets:
             p = q_target[h]
@@ -293,9 +301,9 @@ def plot_solution(
                 alpha=0.9,
                 label=None,
             )
-        ax.scatter([], [], marker="^", s=S_TARGET, c=COLOR_TARGET, label="alvo")
+        ax.scatter([], [], marker="^", s=S_TARGET, c=COLOR_TARGET, label="target")
 
-    # trajetórias (contexto)
+    # Trajectories (context)
     for name in mob_names:
         traj = _traj_with_breaks(
             r_mobile, name, T, close=False, jump_factor=5.0
@@ -317,7 +325,7 @@ def plot_solution(
             alpha=0.7,
         )
 
-    ax.set_title("Solução (candidatos, instalados, sink e alvos)")
+    ax.set_title("Solution (candidates, installed, sink and targets)")
     ax.axis("equal")
     ax.grid(True)
     # ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0.0)
@@ -330,33 +338,34 @@ def plot_solution(
     plt.close()
 
 def plot_installed_graph(
-    installed,
-    q_fixed,
-    q_sink,
-    R_comm,
-    region,
-    out_path="./pic_installed_graph.png",
-    targets=None,
-    q_target=None,
-):
+    installed: list[int],
+    q_fixed: dict[int, tuple[float, float]],
+    q_sink: tuple[float, float],
+    R_comm: float,
+    region: list[float],
+    out_path: str = "./pic_installed_graph.png",
+    targets: list[int] | None = None,
+    q_target: dict[int, tuple[float, float]] | None = None,
+) -> None:
     """
-    Plota apenas o grafo formado pelos motes FIXOS instalados.
-    - Vértices: instalados (COLOR_FIXED1) e sink (COLOR_SINK).
-    - Arestas: entre instalados (e do sink para instalados) quando ||u - v|| <= R_comm.
-    - (Opcional) plota alvos como pontos, sem arestas.
+    Plots only the graph formed by the INSTALLED FIXED motes.
+
+    - Vertices: installed motes (COLOR_FIXED1) and sink (COLOR_SINK).
+    - Edges: between installed motes (and sink to installed) when ||u - v|| <= R_comm.
+    - (Optional) plots targets as points, without edges.
     """
     plt.figure(figsize=(10, 7))
     ax = plt.gca()
 
-    # nós instalados (vermelho)
+    # Installed nodes (red)
     for j in installed:
         q = q_fixed[j]
         ax.scatter([q[0]], [q[1]], marker="s", s=S_FIXED1, c=COLOR_FIXED1)
 
-    # sink (estrela azul)
+    # sink (blue star)
     ax.scatter([q_sink[0]], [q_sink[1]], marker="*", s=S_SINK, c=COLOR_SINK)
 
-    # (opcional) alvos
+    # (optional) targets
     if targets is not None and q_target is not None and len(targets) > 0:
         for h in targets:
             p = q_target[h]
@@ -368,13 +377,12 @@ def plot_installed_graph(
                 c=COLOR_TARGET,
                 alpha=0.9,
             )
-        ax.scatter([], [], marker="^", s=S_TARGET, c=COLOR_TARGET, label="alvo")
+        ax.scatter([], [], marker="^", s=S_TARGET, c=COLOR_TARGET, label="target")
 
-    # arestas (vermelhas contínuas) entre instalados
+    # Edges between installed nodes
     def _dist(p, q):
         return float(np.hypot(p[0] - q[0], p[1] - q[1]))
 
-    # entre instalados
     for idx in range(len(installed)):
         for jdx in range(idx + 1, len(installed)):
             a = installed[idx]
@@ -389,7 +397,7 @@ def plot_installed_graph(
                     c="red",
                 )
 
-    # sink ↔ instalados
+    # Edges sink ↔ installed
     for j in installed:
         p = q_fixed[j]
         if _dist(q_sink, p) <= R_comm + 1e-9:
@@ -401,7 +409,7 @@ def plot_installed_graph(
                 c="red",
             )
 
-    ax.set_title("Grafo dos fixos instalados (arestas ≤ R_comm)")
+    ax.set_title("Installed fixed-node graph (edges ≤ R_comm)")
     ax.axis("equal")
     ax.grid(True)
     ax.legend(loc="best")
