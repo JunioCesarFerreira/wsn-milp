@@ -21,7 +21,7 @@ except Exception as e:
 # Parâmetros do programa
 SIM_JSON_PATH = "./input.json"   # ajuste conforme necessário
 RESULTS_PATH = Path("./output")
-ADD_RANDOM = True                # True para injetar candidatos aleatórios
+ADD_RANDOM = False                # True para injetar candidatos aleatórios
 
 # Inicializações de parâmetros adicionais
 # 1) Carrega JSON base

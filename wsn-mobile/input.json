@@ -3,7 +3,7 @@
     "name": "single-experiment-sim-lab",
     "duration": 60,
     "radiusOfReach": 50,
-    "radiusOfInter": 60,
+    "radiusOfInter": 90,
     "region": [
       -200,
       -100,
@@ -114,6 +114,150 @@
             44
           ],
           "name": "node12",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            -124.73684210526316,
+            -55.78947368421053
+          ],
+          "name": "node13",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            -108.42105263157896,
+            9.736842105263158
+          ],
+          "name": "node14",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            -54.21052631578948,
+            -12.631578947368421
+          ],
+          "name": "node15",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            38.684210526315795,
+            -23.68421052631579
+          ],
+          "name": "node16",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            88.15789473684211,
+            -54.73684210526316
+          ],
+          "name": "node17",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            0.2631578947368421,
+            63.42105263157895
+          ],
+          "name": "node18",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            -88.6842105263158,
+            71.31578947368422
+          ],
+          "name": "node19",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            -126.31578947368422,
+            68.42105263157895
+          ],
+          "name": "node20",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            -108.15789473684211,
+            38.684210526315795
+          ],
+          "name": "node21",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            -33.94736842105263,
+            66.31578947368422
+          ],
+          "name": "node22",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            81.31578947368422,
+            71.05263157894737
+          ],
+          "name": "node23",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            131.8421052631579,
+            54.21052631578948
+          ],
+          "name": "node24",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            67.10526315789474,
+            -42.89473684210527
+          ],
+          "name": "node25",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            70.52631578947368,
+            -82.89473684210526
+          ],
+          "name": "node26",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            -11.31578947368421,
+            -88.94736842105263
+          ],
+          "name": "node27",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            -141.05263157894737,
+            -86.31578947368422
+          ],
+          "name": "node28",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            -143.1578947368421,
+            5.526315789473684
+          ],
+          "name": "node29",
+          "sourceCode": "node.c"
+        },
+        {
+          "position": [
+            138.94736842105263,
+            7.36842105263158
+          ],
+          "name": "node30",
           "sourceCode": "node.c"
         }
       ],

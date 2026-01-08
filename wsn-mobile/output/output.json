@@ -2,7 +2,7 @@
     "name": "single-experiment-sim-lab",
     "duration": 60,
     "radiusOfReach": 50,
-    "radiusOfInter": 60,
+    "radiusOfInter": 90,
     "region": [
         -200,
         -100,
@@ -29,10 +29,18 @@
             },
             {
                 "position": [
+                    -71.0,
+                    13.0
+                ],
+                "name": "node2",
+                "sourceCode": "node.c"
+            },
+            {
+                "position": [
                     -102.0,
                     -21.0
                 ],
-                "name": "node2",
+                "name": "node3",
                 "sourceCode": "node.c"
             },
             {
@@ -40,7 +48,15 @@
                     -91.0,
                     -59.0
                 ],
-                "name": "node3",
+                "name": "node4",
+                "sourceCode": "node.c"
+            },
+            {
+                "position": [
+                    -73.0,
+                    42.0
+                ],
+                "name": "node5",
                 "sourceCode": "node.c"
             },
             {
@@ -48,7 +64,7 @@
                     -11.0,
                     -45.5
                 ],
-                "name": "node4",
+                "name": "node6",
                 "sourceCode": "node.c"
             },
             {
@@ -56,7 +72,7 @@
                     27.0,
                     39.0
                 ],
-                "name": "node5",
+                "name": "node7",
                 "sourceCode": "node.c"
             },
             {
@@ -64,15 +80,7 @@
                     74.0,
                     29.0
                 ],
-                "name": "node6",
-                "sourceCode": "node.c"
-            },
-            {
-                "position": [
-                    102.0,
-                    -12.0
-                ],
-                "name": "node7",
+                "name": "node8",
                 "sourceCode": "node.c"
             },
             {
@@ -80,7 +88,7 @@
                     114.0,
                     -33.0
                 ],
-                "name": "node8",
+                "name": "node9",
                 "sourceCode": "node.c"
             },
             {
@@ -88,29 +96,21 @@
                     87.0,
                     44.0
                 ],
-                "name": "node9",
-                "sourceCode": "node.c"
-            },
-            {
-                "position": [
-                    -74.47885710671174,
-                    32.41437154400245
-                ],
                 "name": "node10",
                 "sourceCode": "node.c"
             },
             {
                 "position": [
-                    24.144027024094726,
-                    -56.0352263042327
+                    38.684210526315795,
+                    -23.68421052631579
                 ],
                 "name": "node11",
                 "sourceCode": "node.c"
             },
             {
                 "position": [
-                    -49.03573903173938,
-                    -69.70902258243518
+                    67.10526315789474,
+                    -42.89473684210527
                 ],
                 "name": "node12",
                 "sourceCode": "node.c"
