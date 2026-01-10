@@ -123,15 +123,14 @@ $$
       \;\ge\; \mathbf{g}\,y_j,
   && \forall j\in\mathcal{J}, 
   \\
-  & y_j \in \lbrace0,1\rbrace,
+  & y_j \in \lbrace0,1\rbrace,\quad g_j \ge 0,
   && \forall j\in\mathcal{J},
   \\
   & z_{ij} \in \lbrace0,1\rbrace,\quad x_{ij} \ge 0,
-  && \forall (i,j)\in\mathcal{E},
-  \\
-  & g_j \ge 0,
-  && \forall j\in\mathcal{J}.
+  && \forall (i,j)\in\mathcal{E}.
 \end{aligned}
 $$
 
 ---
+
+
