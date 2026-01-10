@@ -101,7 +101,7 @@ $$
   & z_{sj} \le y_j,\quad z_{js} \le y_j, 
   && \forall j\in\mathcal{J}\,|\, (s,j),(j,s)\in\mathcal{E},
   \\
-  & 0 \le x_{ij} \le M_{\max}\,z_{ij},
+  & 0 \le x_{ij} \le M_{\max}\ z_{ij},
   && \forall (i,j)\in\mathcal{E}, 
   \\
   & \alpha G_{\max}y_j \le g_j \le G_{\max}y_j,
