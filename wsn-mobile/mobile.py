@@ -105,7 +105,7 @@ def pos_node(n, t: int):
         return r_mobile(n[1], t)
     raise ValueError(f"Nó desconhecido: {n}")
 
-# Demanda: cada móvel gera 1.0 unidade por tempo (b_{m,t} = 1)
+# Demanda: cada móvel gera B unidade por tempo (b_{m,t} = B)
 b = {(name, t): B for name in mob_names for t in range(1, T + 1)}
 
 # ==============================
