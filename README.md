@@ -56,6 +56,9 @@ $$
   & 0\le g_m(t) \le b_{m,t}, 
   && \forall m\in\mathcal{M},\ \forall t\in\mathcal{T}
   \\
+  & g_m(t) \ge \alpha b_{m,t}, 
+  && \forall m\in\mathcal{M},\ \forall t\in\mathcal{T},\ \text{fixed }\alpha\in(0,1]
+  \\
   & \sum_{i:(m,i)\in \mathcal E_t} x_{mi}(t) - \sum_{i:(i,m)\in \mathcal E_t} x_{im}(t) = g_m(t),
   && \forall m\in\mathcal M,\ \forall t\in\mathcal T,
   \\

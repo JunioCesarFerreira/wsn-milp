@@ -50,6 +50,9 @@ mobile_list = sim["simulationElements"]["mobileMotes"]
 C0      = 10.0     # capacidade máxima nominal (C_0)
 kdecay  = 0.1      # fator de atenuação (k_decay)
 w_install = 1000.0**2  # peso w da função objetivo para instalação de motes
+lambda_thr = 1.0  # λ do termo de throughput (ajuste conforme calibração)
+B = 20.0     # Demanda máxima por mote
+alpha = 0.8  # por exemplo: pelo menos 50% da demanda
 
 # Dicionário de motes
 sink_name = None  # nome do sink
@@ -103,7 +106,7 @@ def pos_node(n, t: int):
     raise ValueError(f"Nó desconhecido: {n}")
 
 # Demanda: cada móvel gera 1.0 unidade por tempo (b_{m,t} = 1)
-b = {(name, t): 1.0 for name in mob_names for t in range(1, T + 1)}
+b = {(name, t): B for name in mob_names for t in range(1, T + 1)}
 
 # ==============================
 # Modelo Gurobi
@@ -176,19 +179,41 @@ for t in range(1, T + 1):
         z[(i, j, t)] = mdl.addVar(vtype=GRB.BINARY, name=f"z_{i}_{j}_t{t}")
         xvar[(i, j, t)] = mdl.addVar(lb=0.0, name=f"x_{i}_{j}_t{t}")
 
+# g_m(t) para cada móvel e tempo
+gvar = {}
+for t in range(1, T + 1):
+    for name in mob_names:
+        # 0 <= g_m(t) <= b_{m,t}
+        gvar[(name, t)] = mdl.addVar(lb=0.0, ub=b[(name, t)], name=f"g_{name}_t{t}")
+
+for t in range(1, T + 1):
+    for name in mob_names:
+        mdl.addConstr(
+            gvar[(name, t)] >= alpha * b[(name, t)],
+            name=f"min_throughput_{name}_t{t}"
+        )
+
 mdl.update()
 
 # --------------------------------------------
-# Objetivo (modelo mobile)
-#   min  w * sum_j y_j  +  sum_t sum_(i,j) e_ij(t) * x_ij(t)
+# Objetivo (modelo mobile atualizado com throughput)
+#   min  w * sum_j y_j  +  sum_t sum_(i,j) e_ij(t) * x_ij(t)  - lambda * sum_t sum_m g_m(t)
 # --------------------------------------------
 obj_install = w_install * gp.quicksum(y[j] for j in J)
+
 obj_flow = gp.quicksum(
     e_cost[(i, j, t)] * xvar[(i, j, t)]
     for t in range(1, T + 1)
     for (i, j) in E_t[t]
 )
-mdl.setObjective(obj_install + obj_flow, GRB.MINIMIZE)
+
+obj_throughput = lambda_thr * gp.quicksum(
+    gvar[(name, t)]
+    for t in range(1, T + 1)
+    for name in mob_names
+)
+
+mdl.setObjective(obj_install + obj_flow - obj_throughput, GRB.MINIMIZE)
 
 # --------------------------------------------
 # Restrições (modelo mobile)
@@ -212,18 +237,22 @@ for t in range(1, T + 1):
         if j[0] == "j":  # j é um candidato fixo
             mdl.addConstr(z[(i, j, t)] <= y[j], name=f"inst_j_{i}_{j}_t{t}")
 
-# (3) Conservação de fluxo nos móveis: sum_out - sum_in = b_{m,t}
+# (3) Conservação de fluxo nos móveis: sum_out - sum_in = g_{m,t}
 for t in range(1, T + 1):
     for name in mob_names:
         m_node = ("m", name)
+
         outflow = gp.quicksum(
             xvar[(m_node, j, t)] for (ii, j) in E_t[t] if ii == m_node
         )
         inflow = gp.quicksum(
             xvar[(i, m_node, t)] for (i, jj) in E_t[t] if jj == m_node
         )
-        mdl.addConstr(outflow - inflow == b[(name, t)],
-                      name=f"flow_mobile_{name}_t{t}")
+
+        mdl.addConstr(
+            outflow - inflow == gvar[(name, t)],
+            name=f"flow_mobile_{name}_t{t}"
+        )
 
 # (4) Conservação de fluxo nos fixos: sum_out - sum_in = 0
 for t in range(1, T + 1):
@@ -237,13 +266,13 @@ for t in range(1, T + 1):
         mdl.addConstr(outflow - inflow == 0.0,
                       name=f"flow_fixed_{j_node}_t{t}")
 
-# (5) Balanço no sink s: sum_in = sum_m b_{m,t}
+# (5) Balanço no sink s: sum_in = sum_m g_{m,t}
 for t in range(1, T + 1):
     inflow_s = gp.quicksum(
         xvar[(i, sink, t)] for (i, j) in E_t[t] if j == sink
     )
-    total_bt = gp.quicksum(b[(name, t)] for name in mob_names)
-    mdl.addConstr(inflow_s == total_bt, name=f"flow_sink_t{t}")
+    total_gt = gp.quicksum(gvar[(name, t)] for name in mob_names)
+    mdl.addConstr(inflow_s == total_gt, name=f"flow_sink_t{t}")
 
 # --------------------------------------------
 # Plots de candidatos
@@ -279,6 +308,7 @@ x_val = {(i, j, t): xvar[(i, j, t)].X
          for t in range(1, T + 1) for (i, j) in E_t[t]}
 z_val = {(i, j, t): z[(i, j, t)].X
          for t in range(1, T + 1) for (i, j) in E_t[t]}
+g_val = {(name, t): gvar[(name, t)].X for t in range(1, T + 1) for name in mob_names}
 
 fixed_motes_out = []
 fixed_motes_out.append({
