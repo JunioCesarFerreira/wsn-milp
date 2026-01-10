@@ -52,7 +52,7 @@ kdecay  = 0.1      # fator de atenuação (k_decay)
 w_install = 1000.0**2  # peso w da função objetivo para instalação de motes
 lambda_thr = 1.0  # λ do termo de throughput (ajuste conforme calibração)
 B = 20.0     # Demanda máxima por mote
-alpha = 0.8  # por exemplo: pelo menos 50% da demanda
+alpha = 0.8  # Porcentagem mínima de demanda obrigatória, este valor deve ser maior que 0 para o modelo não ficar degenerado
 
 # Dicionário de motes
 sink_name = None  # nome do sink
@@ -184,14 +184,11 @@ gvar = {}
 for t in range(1, T + 1):
     for name in mob_names:
         # 0 <= g_m(t) <= b_{m,t}
-        gvar[(name, t)] = mdl.addVar(lb=0.0, ub=b[(name, t)], name=f"g_{name}_t{t}")
-
-for t in range(1, T + 1):
-    for name in mob_names:
-        mdl.addConstr(
-            gvar[(name, t)] >= alpha * b[(name, t)],
-            name=f"min_throughput_{name}_t{t}"
-        )
+        gvar[(name, t)] = mdl.addVar(
+            lb=alpha * b[(name, t)], 
+            ub=b[(name, t)], 
+            name=f"g_{name}_t{t}"
+            )
 
 mdl.update()
 
