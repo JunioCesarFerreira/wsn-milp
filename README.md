@@ -53,12 +53,6 @@ $$
   & 0\le x_{ij}(t)\le C_{ij}(t)\,z_{ij}(t), 
   && \forall (i,j)\in\mathcal E_t,\ \forall t\in\mathcal T,
   \\
-  & 0\le g_m(t) \le b_{m,t}, 
-  && \forall m\in\mathcal{M},\ \forall t\in\mathcal{T}
-  \\
-  & g_m(t) \ge \alpha b_{m,t}, 
-  && \forall m\in\mathcal{M},\ \forall t\in\mathcal{T},\ \text{fixed }\alpha\in(0,1]
-  \\
   & \sum_{i:(m,i)\in \mathcal E_t} x_{mi}(t) - \sum_{i:(i,m)\in \mathcal E_t} x_{im}(t) = g_m(t),
   && \forall m\in\mathcal M,\ \forall t\in\mathcal T,
   \\
@@ -74,7 +68,7 @@ $$
   & z_{ij}(t)\in\lbrace0,1\rbrace,\quad x_{ij}(t)\ge 0, 
   && \forall (i,j)\in\mathcal{E}_t,\ \forall t\in\mathcal T
   \\
-  & g_m(t)\ge 0, && \forall m\in\mathcal{M}, \ \forall t\in\mathcal{T}.
+  & \alpha b_{m} \le g_m(t) \le b_{m}, && \forall m\in\mathcal{M}, \ \forall t\in\mathcal{T}.
 \end{aligned}
 $$
 
@@ -110,8 +104,8 @@ $$
   & 0 \le x_{ij} \le M_{\max}\,z_{ij},
   && \forall (i,j)\in\mathcal{E}, 
   \\
-  & 0 \le g_j \le G_{\max}y_j
-  && \forall j\in\mathcal{J}
+  & \alpha G_{\max}y_j \le g_j \le G_{\max}y_j,
+  && \forall j\in\mathcal{J},
   \\
   & \sum_{i:(j,i)\in\mathcal{E}} x_{ji}
       - \sum_{i:(i,j)\in\mathcal{E}} x_{ij}
@@ -133,7 +127,10 @@ $$
   && \forall j\in\mathcal{J},
   \\
   & z_{ij} \in \lbrace0,1\rbrace,\quad x_{ij} \ge 0,
-  && \forall (i,j)\in\mathcal{E}.
+  && \forall (i,j)\in\mathcal{E},
+  \\
+  & g_j \ge 0,
+  && \forall j\in\mathcal{J}.
 \end{aligned}
 $$
 
