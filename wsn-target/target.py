@@ -44,14 +44,16 @@ R_cov = float(sim.get("radiusOfCov", R_comm))
 
 fixed_list  = sim["simulationElements"]["fixedMotes"]
 
-# parâmetros do modelo (modelo target)
-w_install = float(sim.get("w_install", 1e6))    # peso w da instalação no objetivo
-k_cov     = int(sim.get("k_coverage", 2))       # nível de cobertura k
-g_conn    = int(sim.get("g_connectivity", 1))   # nível de conectividade g
-M_max     = float(sim.get("M_max", 1e4))        # big-M global para as capacidades de fluxo
-lambda_thr = float(sim.get("lambda_thr", 1.0))  # λ do termo de throughput no objetivo
-G_max      = float(sim.get("G_max", 3000.0))    # G_max: limite superior de g_j quando y_j=1
-alpha = float(sim.get("alpha_thr", 0.9))
+# ------------------------------
+# Parâmetros do modelo (modelo target)
+# ------------------------------
+w_install  = 1e6    # peso w da instalação no objetivo
+k_cov      = 2      # nível de cobertura k
+g_conn     = 1      # nível de conectividade g
+M_max      = 1e4    # big-M global para as capacidades de fluxo
+lambda_thr = 1.0    # λ do termo de throughput no objetivo
+G_max      = 3000.0 # G_max: limite superior de g_j quando y_j=1
+alpha      = 0.9    # Porcentagem mínima de demanda obrigatória
 
 # ------------------------------
 # sink e nós fixos candidatos

@@ -47,12 +47,12 @@ mobile_list = sim["simulationElements"]["mobileMotes"]
 # ------------------------------
 # Parâmetros do modelo (modelo mobile)
 # ------------------------------
-C0      = 10.0     # capacidade máxima nominal (C_0)
-kdecay  = 0.1      # fator de atenuação (k_decay)
-w_install = 1000.0**2  # peso w da função objetivo para instalação de motes
-lambda_thr = 1.0  # λ do termo de throughput (ajuste conforme calibração)
-B = 20.0     # Demanda máxima por mote
-alpha = 0.8  # Porcentagem mínima de demanda obrigatória, este valor deve ser maior que 0 para o modelo não ficar degenerado
+C0         = 10.0      # capacidade máxima nominal (C_0)
+kdecay     = 0.1       # fator de atenuação (k_decay)
+w_install  = 1000.0**2 # peso w da função objetivo para instalação de motes
+lambda_thr = 1.0       # λ do termo de throughput (ajuste conforme calibração)
+B          = 20.0      # Demanda máxima por mote
+alpha      = 0.8       # Porcentagem mínima de demanda obrigatória, este valor deve ser maior que 0 para o modelo não ficar degenerado
 
 # Dicionário de motes
 sink_name = None  # nome do sink
