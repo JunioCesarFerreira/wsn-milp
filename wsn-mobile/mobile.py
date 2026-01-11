@@ -50,9 +50,7 @@ mobile_list = sim["simulationElements"]["mobileMotes"]
 C0         = 10.0      # capacidade máxima nominal (C_0)
 kdecay     = 0.1       # fator de atenuação (k_decay)
 w_install  = 1000.0**2 # peso w da função objetivo para instalação de motes
-lambda_thr = 1.0       # λ do termo de throughput (ajuste conforme calibração)
-B          = 20.0      # Demanda máxima por mote
-alpha      = 0.8       # Porcentagem mínima de demanda obrigatória, este valor deve ser maior que 0 para o modelo não ficar degenerado
+B          = 1.0       # Demanda máxima por mote, a priori constante no tempo
 
 # Dicionário de motes
 sink_name = None  # nome do sink
@@ -179,17 +177,6 @@ for t in range(1, T + 1):
         z[(i, j, t)] = mdl.addVar(vtype=GRB.BINARY, name=f"z_{i}_{j}_t{t}")
         xvar[(i, j, t)] = mdl.addVar(lb=0.0, name=f"x_{i}_{j}_t{t}")
 
-# g_m(t) para cada móvel e tempo
-gvar = {}
-for t in range(1, T + 1):
-    for name in mob_names:
-        # 0 <= g_m(t) <= b_{m,t}
-        gvar[(name, t)] = mdl.addVar(
-            lb=alpha * b[(name, t)], 
-            ub=b[(name, t)], 
-            name=f"g_{name}_t{t}"
-            )
-
 mdl.update()
 
 # --------------------------------------------
@@ -204,13 +191,7 @@ obj_flow = gp.quicksum(
     for (i, j) in E_t[t]
 )
 
-obj_throughput = lambda_thr * gp.quicksum(
-    gvar[(name, t)]
-    for t in range(1, T + 1)
-    for name in mob_names
-)
-
-mdl.setObjective(obj_install + obj_flow - obj_throughput, GRB.MINIMIZE)
+mdl.setObjective(obj_install + obj_flow, GRB.MINIMIZE)
 
 # --------------------------------------------
 # Restrições (modelo mobile)
@@ -247,7 +228,7 @@ for t in range(1, T + 1):
         )
 
         mdl.addConstr(
-            outflow - inflow == gvar[(name, t)],
+            outflow - inflow == b[(name, t)],
             name=f"flow_mobile_{name}_t{t}"
         )
 
@@ -268,7 +249,7 @@ for t in range(1, T + 1):
     inflow_s = gp.quicksum(
         xvar[(i, sink, t)] for (i, j) in E_t[t] if j == sink
     )
-    total_gt = gp.quicksum(gvar[(name, t)] for name in mob_names)
+    total_gt = gp.quicksum(b[(name, t)] for name in mob_names)
     mdl.addConstr(inflow_s == total_gt, name=f"flow_sink_t{t}")
 
 # --------------------------------------------
@@ -305,7 +286,6 @@ x_val = {(i, j, t): xvar[(i, j, t)].X
          for t in range(1, T + 1) for (i, j) in E_t[t]}
 z_val = {(i, j, t): z[(i, j, t)].X
          for t in range(1, T + 1) for (i, j) in E_t[t]}
-g_val = {(name, t): gvar[(name, t)].X for t in range(1, T + 1) for name in mob_names}
 
 fixed_motes_out = []
 fixed_motes_out.append({

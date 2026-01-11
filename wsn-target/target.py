@@ -51,9 +51,7 @@ w_install  = 1e6    # peso w da instalação no objetivo
 k_cov      = 2      # nível de cobertura k
 g_conn     = 1      # nível de conectividade g
 M_max      = 1e4    # big-M global para as capacidades de fluxo
-lambda_thr = 1.0    # λ do termo de throughput no objetivo
-G_max      = 3000.0 # G_max: limite superior de g_j quando y_j=1
-alpha      = 0.9    # Porcentagem mínima de demanda obrigatória
+B          = 1      # demanda quando y_j=1, observe que B deve ser menor que M_max
 
 # ------------------------------
 # sink e nós fixos candidatos
@@ -179,12 +177,6 @@ for (u, v) in E:
         name=f"x_{u[0]}_{u[1]}__{v[0]}_{v[1]}"
     )
     
-# g_j (throughput gerado pelo nó j)
-g = {
-    j: mdl.addVar(lb=0.0, ub=G_max, name=f"g_{j[0]}_{j[1]}")
-    for j in J
-}
-
 mdl.update()
 
 # --------------------------------------------
@@ -193,9 +185,8 @@ mdl.update()
 # --------------------------------------------
 obj_install = gp.quicksum(y[j] for j in J)
 obj_edges   = gp.quicksum(e_cost[(u, v)] * z[(u, v)] for (u, v) in E)
-obj_thr     = gp.quicksum(g[j] for j in J)
 
-mdl.setObjective(w_install * obj_install + obj_edges - lambda_thr * obj_thr, GRB.MINIMIZE)
+mdl.setObjective(w_install * obj_install + obj_edges, GRB.MINIMIZE)
 
 # --------------------------------------------
 # Restrições
@@ -230,17 +221,6 @@ for j in J:
         name=f"g_conn_{j[1]}"
     )
     
-# (g bound) alpha * y_i <= g_j <= G_max * y_j
-for j in J:
-    mdl.addConstr(
-        g[j] <=  G_max * y[j],
-        name=f"g_le_Gmax_y_{j[1]}"
-    )
-    mdl.addConstr(
-        g[j] >= alpha * G_max * y[j],
-        name=f"g_ge_alpha_y_{j[1]}"
-    )
-
 # (Link só pode ativar se extremos instalados)
 # z_ij <= y_i, z_ij <= y_j para (i,j) com i,j ∈ J
 # z_sj <= y_j, z_js <= y_j para arestas que envolvem o sink
@@ -267,7 +247,7 @@ for (u, v) in E:
     )
 
 # (Conservação de fluxo nos fixos):
-#   ∑_{v:(j,v)∈E} x_jv - ∑_{u:(u,j)∈E} x_uj = y_j , ∀ j∈J
+#   ∑_{v:(j,v)∈E} x_jv - ∑_{u:(u,j)∈E} x_uj = B y_j , ∀ j∈J
 for j in J:
     outflow = gp.quicksum(
         xvar[(j, v)] for (u, v) in E if u == j
@@ -276,17 +256,17 @@ for j in J:
         xvar[(u, j)] for (u, v) in E if v == j
     )
     mdl.addConstr(
-        outflow - inflow == g[j],
+        outflow - inflow == B * y[j],
         name=f"flow_cons_{j[1]}"
     )
 
 # (Nó sink):
-#   ∑_{u:(u,s)∈E} x_us = ∑_{j∈J} y_j
+#   ∑_{u:(u,s)∈E} x_us = ∑_{j∈J} B y_j
 inflow_sink = gp.quicksum(
     xvar[(u, sink)] for (u, v) in E if v == sink
 )
 
-total_g = gp.quicksum(g[j] for j in J)
+total_g = gp.quicksum(B * y[j] for j in J)
 mdl.addConstr(inflow_sink == total_g, name="flow_sink_in")
 
 
